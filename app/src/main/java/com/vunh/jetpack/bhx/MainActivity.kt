@@ -45,7 +45,9 @@ import com.vunh.jetpack.bhx.presentation.profile.ScannerScreen
 import com.vunh.jetpack.bhx.presentation.profile.SpecialOfferScreen
 import com.vunh.jetpack.bhx.presentation.profile.WalletScreen
 import com.vunh.jetpack.bhx.ui.theme.BhxTheme
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

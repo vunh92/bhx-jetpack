@@ -31,6 +31,7 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.vunh.jetpack.bhx.domain.model.*
 import com.vunh.jetpack.bhx.presentation.common.HeaderSection
 import kotlinx.coroutines.delay
@@ -38,7 +39,15 @@ import kotlinx.coroutines.yield
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(onMenuClick: () -> Unit, onNavigateToProfile: () -> Unit, isLoggedIn: Boolean) {
+fun HomeScreen(
+    onMenuClick: () -> Unit,
+    onNavigateToProfile: () -> Unit,
+    isLoggedIn: Boolean,
+    viewModel: HomeViewModel = hiltViewModel()
+) {
+    val posts by viewModel.posts.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+
     var showLoginDialog by remember { mutableStateOf(false) }
     var showProductSheet by remember { mutableStateOf(false) }
     var showIngredientSheet by remember { mutableStateOf(false) }
@@ -102,35 +111,57 @@ fun HomeScreen(onMenuClick: () -> Unit, onNavigateToProfile: () -> Unit, isLogge
     ) {
         HeaderSection(isHome = true, onMenuClick = onMenuClick)
 
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-        ) {
-            MainBannerSection(onClick = onActionClick)
-            PromoGridSection(onClick = onActionClick)
-            CategorySection(onClick = onActionClick)
-            EssentialProductsSection(onClick = { product ->
-                if (isLoggedIn) {
-                    selectedProductForSheet = product
-                    showProductSheet = true
-                } else {
-                    showLoginDialog = true
-                }
-            })
-            DailyMarketSection(
-                onCategoryClick = onActionClick,
-                onRecipeClick = { _ -> onActionClick() },
-                onProductClick = { product ->
+        if (isLoading) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(color = Color(0xFF008848))
+            }
+        } else {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+            ) {
+                MainBannerSection(onClick = onActionClick)
+                PromoGridSection(onClick = onActionClick)
+                CategorySection(onClick = onActionClick)
+                EssentialProductsSection(onClick = { product ->
                     if (isLoggedIn) {
-                        selectedRecipeForSheet = Recipe(product.name)
-                        showIngredientSheet = true
+                        selectedProductForSheet = product
+                        showProductSheet = true
                     } else {
                         showLoginDialog = true
                     }
+                })
+                DailyMarketSection(
+                    onCategoryClick = onActionClick,
+                    onRecipeClick = { _ -> onActionClick() },
+                    onProductClick = { product ->
+                        if (isLoggedIn) {
+                            selectedRecipeForSheet = Recipe(product.name)
+                            showIngredientSheet = true
+                        } else {
+                            showLoginDialog = true
+                        }
+                    }
+                )
+                
+                // Displaying posts as an example of API data usage
+                if (posts.isNotEmpty()) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text("Tin tức mới", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                        posts.take(5).forEach { post ->
+                            Card(
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                                colors = CardDefaults.cardColors(containerColor = Color.White)
+                            ) {
+                                Text(post.title, modifier = Modifier.padding(8.dp), fontSize = 14.sp)
+                            }
+                        }
+                    }
                 }
-            )
-            Spacer(modifier = Modifier.height(16.dp))
+                
+                Spacer(modifier = Modifier.height(16.dp))
+            }
         }
     }
 }
