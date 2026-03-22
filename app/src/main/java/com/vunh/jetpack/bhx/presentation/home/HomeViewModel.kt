@@ -3,7 +3,7 @@ package com.vunh.jetpack.bhx.presentation.home
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vunh.jetpack.bhx.domain.model.Post
-import com.vunh.jetpack.bhx.domain.repository.HomeRepository
+import com.vunh.jetpack.bhx.domain.usecase.GetPostsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -13,7 +13,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
-    private val repository: HomeRepository
+    private val getPostsUseCase: GetPostsUseCase
 ) : ViewModel() {
 
     private val _posts = MutableStateFlow<List<Post>>(emptyList())
@@ -30,7 +30,7 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                _posts.value = repository.getPosts()
+                _posts.value = getPostsUseCase()
             } catch (e: Exception) {
                 // Handle error
             } finally {

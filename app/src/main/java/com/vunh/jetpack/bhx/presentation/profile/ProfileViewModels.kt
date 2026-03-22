@@ -2,7 +2,15 @@ package com.vunh.jetpack.bhx.presentation.profile
 
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.ViewModel
-import com.vunh.jetpack.bhx.data.local.ProfileManager
+import com.vunh.jetpack.bhx.domain.usecase.GetGiftUiStateUseCase
+import com.vunh.jetpack.bhx.domain.usecase.GetNotificationUiStateUseCase
+import com.vunh.jetpack.bhx.domain.usecase.GetPointExchangeUiStateUseCase
+import com.vunh.jetpack.bhx.domain.usecase.GetProfileUiStateUseCase
+import com.vunh.jetpack.bhx.domain.usecase.GetPromotionCollectionUiStateUseCase
+import com.vunh.jetpack.bhx.domain.usecase.GetScannerUiStateUseCase
+import com.vunh.jetpack.bhx.domain.usecase.GetWalletUiStateUseCase
+import com.vunh.jetpack.bhx.domain.usecase.LoginUseCase
+import com.vunh.jetpack.bhx.domain.usecase.LogoutUseCase
 import com.vunh.jetpack.bhx.domain.model.UserProfile
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,11 +28,11 @@ data class ProfileUiState(
 
 @HiltViewModel
 class ProfileViewModel @Inject constructor(
-    private val profileManager: ProfileManager
+    private val getProfileUiStateUseCase: GetProfileUiStateUseCase,
+    private val loginUseCase: LoginUseCase,
+    private val logoutUseCase: LogoutUseCase
 ) : ViewModel() {
-    private val _uiState = MutableStateFlow(
-        ProfileUiState(userProfile = profileManager.getProfile())
-    )
+    private val _uiState = MutableStateFlow(getProfileUiStateUseCase())
     val uiState: StateFlow<ProfileUiState> = _uiState.asStateFlow()
 
     fun showOtpDialog(phoneNumber: String) {
@@ -39,15 +47,7 @@ class ProfileViewModel @Inject constructor(
     }
 
     fun completeLogin() {
-        val phoneNumber = _uiState.value.phoneNumber
-        val profile = UserProfile(
-            name = "Anh Vu",
-            phoneNumber = phoneNumber,
-            rank = "CHƯA CÓ HẠNG",
-            points = 17450,
-            memberCode = "450138"
-        )
-        profileManager.saveProfile(profile)
+        val profile = loginUseCase(_uiState.value.phoneNumber)
         _uiState.value = _uiState.value.copy(
             userProfile = profile,
             showOtpDialog = false
@@ -55,34 +55,23 @@ class ProfileViewModel @Inject constructor(
     }
 
     fun logout() {
-        profileManager.clearProfile()
+        logoutUseCase()
         _uiState.value = _uiState.value.copy(userProfile = null)
     }
 }
 
 data class NotificationUiState(
-    val notifications: List<NotificationItem> = listOf(
-        NotificationItem(
-            title = "PHIẾU MUA HÀNG GIẢM 20.000đ",
-            content = "Tặng Anh VU mã giảm 20.000đ áp dụng khi mua các sản phẩm dầu gội Nguyên Xuân tại siêu thị hoặc Online Bách Hóa XANH\nMã: 6X0TZW62WP\nHạn sử dụng: 11/03/2026",
-            time = "13:47 04/03/2026",
-            isRead = false
-        ),
-        NotificationItem(
-            title = "PHIẾU MUA HÀNG GIẢM 20.000đ",
-            content = "Tặng Anh VU mã giảm 20.000đ áp dụng khi mua các sản phẩm băng vệ sinh từ 50.000đ tại siêu thị hoặc Online Bách Hóa XANH\nMã: JNUN3B65SU\nHạn sử dụng: 11/03/2026",
-            time = "13:47 04/03/2026",
-            isRead = false
-        )
-    )
+    val notifications: List<NotificationItem> = emptyList()
 ) {
     val unreadCount: Int
         get() = notifications.count { !it.isRead }
 }
 
 @HiltViewModel
-class NotificationViewModel @Inject constructor() : ViewModel() {
-    private val _uiState = MutableStateFlow(NotificationUiState())
+class NotificationViewModel @Inject constructor(
+    getNotificationUiStateUseCase: GetNotificationUiStateUseCase
+) : ViewModel() {
+    private val _uiState = MutableStateFlow(getNotificationUiStateUseCase())
     val uiState: StateFlow<NotificationUiState> = _uiState.asStateFlow()
 
     fun markAllAsRead() {
@@ -100,8 +89,10 @@ data class ScannerUiState(
 )
 
 @HiltViewModel
-class ScannerViewModel @Inject constructor() : ViewModel() {
-    private val _uiState = MutableStateFlow(ScannerUiState())
+class ScannerViewModel @Inject constructor(
+    getScannerUiStateUseCase: GetScannerUiStateUseCase
+) : ViewModel() {
+    private val _uiState = MutableStateFlow(getScannerUiStateUseCase())
     val uiState: StateFlow<ScannerUiState> = _uiState.asStateFlow()
 }
 
@@ -111,8 +102,10 @@ data class WalletUiState(
 )
 
 @HiltViewModel
-class WalletViewModel @Inject constructor() : ViewModel() {
-    private val _uiState = MutableStateFlow(WalletUiState())
+class WalletViewModel @Inject constructor(
+    getWalletUiStateUseCase: GetWalletUiStateUseCase
+) : ViewModel() {
+    private val _uiState = MutableStateFlow(getWalletUiStateUseCase())
     val uiState: StateFlow<WalletUiState> = _uiState.asStateFlow()
 
     fun setBalance(balance: String) {
@@ -123,88 +116,40 @@ class WalletViewModel @Inject constructor() : ViewModel() {
 }
 
 data class PromotionCollectionUiState(
-    val featuredCoupons: List<CouponInfo> = listOf(
-        CouponInfo("Tặng 20K", "Mua sản phẩm Kem các loại từ 120.000đ", "KT: 15/03/2026"),
-        CouponInfo("Tặng 50k", "Mua sản phẩm Kem, Sữa chua, Đông mát từ 250.000đ", "KT: 15/03/2026"),
-        CouponInfo("Tặng 30k", "Mua trái cây nhập khẩu từ 80.000đ", "KT: 15/03/2026")
-    ),
-    val products: List<CouponProduct> = listOf(
-        CouponProduct("Nước mắm cá cơm K...", "29.000đ", "53.000đ", "-45%"),
-        CouponProduct("Nước xả Comfort diệ...", "168.000đ", "238.000đ", "-29%"),
-        CouponProduct("Nước xả Comfort tinh...", "168.000đ", "238.000đ", "-29%"),
-        CouponProduct("Nước xả Comfort hươ...", "168.000đ", "238.000đ", "-29%"),
-        CouponProduct("Bột giặt Omo Matic...", "168.000đ", "238.000đ", "-28%"),
-        CouponProduct("Nước xả Comfort...", "168.000đ", "238.000đ", "-29%")
-    )
+    val featuredCoupons: List<CouponInfo> = emptyList(),
+    val products: List<CouponProduct> = emptyList()
 )
 
 @HiltViewModel
-class CouponViewModel @Inject constructor() : ViewModel() {
-    private val _uiState = MutableStateFlow(PromotionCollectionUiState())
+class CouponViewModel @Inject constructor(
+    getPromotionCollectionUiStateUseCase: GetPromotionCollectionUiStateUseCase
+) : ViewModel() {
+    private val _uiState = MutableStateFlow(getPromotionCollectionUiStateUseCase())
     val uiState: StateFlow<PromotionCollectionUiState> = _uiState.asStateFlow()
 }
 
 @HiltViewModel
-class SpecialOfferViewModel @Inject constructor() : ViewModel() {
-    private val _uiState = MutableStateFlow(PromotionCollectionUiState())
+class SpecialOfferViewModel @Inject constructor(
+    getPromotionCollectionUiStateUseCase: GetPromotionCollectionUiStateUseCase
+) : ViewModel() {
+    private val _uiState = MutableStateFlow(getPromotionCollectionUiStateUseCase())
     val uiState: StateFlow<PromotionCollectionUiState> = _uiState.asStateFlow()
 }
 
 data class GiftScreenUiState(
-    val gifts: List<GiftItem> = listOf(
-        GiftItem(
-            title = "PHIẾU MUA HÀNG GIẢM 20.000Đ MUA DẦU GỘI NGUYÊN XUÂN BẤT KỲ",
-            expiry = "Hạn dùng: 11/03/2026",
-            status = "Còn 2 ngày",
-            statusColor = Color(0xFFE67E22),
-            isExpired = false
-        ),
-        GiftItem(
-            title = "PHIẾU MUA HÀNG GIẢM 20.000Đ MUA BĂNG VỆ SINH TỪ 50.000Đ",
-            expiry = "Hạn dùng: 11/03/2026",
-            status = "Còn 2 ngày",
-            statusColor = Color(0xFFE67E22),
-            isExpired = false
-        ),
-        GiftItem(
-            title = "PHIẾU MUA HÀNG GIẢM 40.000Đ MUA GẠO ST 25 TẠI BÁCH HÓA XANH",
-            expiry = "Đã hết hạn",
-            status = "",
-            statusColor = Color.Gray,
-            isExpired = true
-        )
-    )
+    val gifts: List<GiftItem> = emptyList()
 )
 
 @HiltViewModel
-class GiftViewModel @Inject constructor() : ViewModel() {
-    private val _uiState = MutableStateFlow(GiftScreenUiState())
+class GiftViewModel @Inject constructor(
+    getGiftUiStateUseCase: GetGiftUiStateUseCase
+) : ViewModel() {
+    private val _uiState = MutableStateFlow(getGiftUiStateUseCase())
     val uiState: StateFlow<GiftScreenUiState> = _uiState.asStateFlow()
 }
 
 data class PointExchangeUiState(
-    val banners: List<PointExchangeBannerUi> = listOf(
-        PointExchangeBannerUi(
-            color = Color(0xFFFFF176),
-            title = "Hóa Đơn Mua Hàng Bách Hóa Xanh Bất Kỳ",
-            subtitle = "Tặng PMH 15K Mua Omo,Comfort,Sunlight,Clear,Dove,.. Từ 159K"
-        ),
-        PointExchangeBannerUi(
-            color = Color(0xFF81C784),
-            title = "Mua gạo tích lũy 500.000đ",
-            subtitle = "Nhận phiếu mua hàng 20.000đ"
-        ),
-        PointExchangeBannerUi(
-            color = Color(0xFFFFB74D),
-            title = "TÍCH LŨY SỮA ABBOTT GROW & PEDIASURE",
-            subtitle = "TẶNG PHIẾU MUA HÀNG TƯƠI SỐNG"
-        ),
-        PointExchangeBannerUi(
-            color = Color(0xFFF8BBD0),
-            title = "TÍCH LŨY NHẬN QUÀ",
-            subtitle = "VOUCHER GIẢM 3% - 5% - 10%"
-        )
-    )
+    val banners: List<PointExchangeBannerUi> = emptyList()
 )
 
 data class PointExchangeBannerUi(
@@ -214,7 +159,9 @@ data class PointExchangeBannerUi(
 )
 
 @HiltViewModel
-class PointExchangeViewModel @Inject constructor() : ViewModel() {
-    private val _uiState = MutableStateFlow(PointExchangeUiState())
+class PointExchangeViewModel @Inject constructor(
+    getPointExchangeUiStateUseCase: GetPointExchangeUiStateUseCase
+) : ViewModel() {
+    private val _uiState = MutableStateFlow(getPointExchangeUiStateUseCase())
     val uiState: StateFlow<PointExchangeUiState> = _uiState.asStateFlow()
 }

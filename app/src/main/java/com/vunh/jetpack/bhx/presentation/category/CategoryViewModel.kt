@@ -1,6 +1,7 @@
 package com.vunh.jetpack.bhx.presentation.category
 
 import androidx.lifecycle.ViewModel
+import com.vunh.jetpack.bhx.domain.usecase.GetCategoryUiStateUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -17,8 +18,10 @@ data class CategoryUiState(
 }
 
 @HiltViewModel
-class CategoryViewModel @Inject constructor() : ViewModel() {
-    private val _uiState = MutableStateFlow(CategoryUiState())
+class CategoryViewModel @Inject constructor(
+    getCategoryUiStateUseCase: GetCategoryUiStateUseCase
+) : ViewModel() {
+    private val _uiState = MutableStateFlow(getCategoryUiStateUseCase())
     val uiState: StateFlow<CategoryUiState> = _uiState.asStateFlow()
 
     fun selectCategory(categoryId: String) {

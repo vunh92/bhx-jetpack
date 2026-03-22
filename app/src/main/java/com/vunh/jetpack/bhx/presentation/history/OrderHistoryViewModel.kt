@@ -1,7 +1,7 @@
 package com.vunh.jetpack.bhx.presentation.history
 
 import androidx.lifecycle.ViewModel
-import com.vunh.jetpack.bhx.data.local.ProfileManager
+import com.vunh.jetpack.bhx.domain.usecase.GetOrderHistoryUiStateUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -16,11 +16,9 @@ data class OrderHistoryUiState(
 
 @HiltViewModel
 class OrderHistoryViewModel @Inject constructor(
-    private val profileManager: ProfileManager
+    getOrderHistoryUiStateUseCase: GetOrderHistoryUiStateUseCase
 ) : ViewModel() {
-    private val _uiState = MutableStateFlow(
-        OrderHistoryUiState(isLoggedIn = profileManager.isLoggedIn())
-    )
+    private val _uiState = MutableStateFlow(getOrderHistoryUiStateUseCase())
     val uiState: StateFlow<OrderHistoryUiState> = _uiState.asStateFlow()
 
     fun selectTab(index: Int) {
