@@ -21,10 +21,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.vunh.jetpack.bhx.R
 import com.vunh.jetpack.bhx.presentation.common.HeaderSection
 
 @Composable
@@ -65,7 +67,7 @@ fun GiftScreen(
                         )
                     }
                     Text(
-                        text = "Quà của tôi",
+                        text = stringResource(R.string.gift_title),
                         modifier = Modifier.weight(1f),
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                         fontSize = 16.sp,
@@ -107,7 +109,7 @@ fun GiftScreen(
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Icon(Icons.AutoMirrored.Filled.Chat, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
-                Text("Chat", color = Color.White, fontSize = 10.sp)
+                Text(stringResource(R.string.action_chat), color = Color.White, fontSize = 10.sp)
             }
         }
     }

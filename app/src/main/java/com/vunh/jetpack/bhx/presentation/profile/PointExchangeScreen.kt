@@ -16,11 +16,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.vunh.jetpack.bhx.R
 import com.vunh.jetpack.bhx.presentation.common.HeaderSection
 
 @Composable
@@ -60,7 +62,7 @@ fun PointExchangeScreen(
                     )
                 }
                 Text(
-                    text = "Tích điểm đổi quà",
+                    text = stringResource(R.string.point_exchange_title),
                     modifier = Modifier.weight(1f),
                     textAlign = TextAlign.Center,
                     fontSize = 16.sp,
@@ -128,7 +130,7 @@ fun PointBanner(color: Color, title: String, subtitle: String) {
                         .background(Color.White.copy(alpha = 0.5f), RoundedCornerShape(4.dp))
                         .padding(horizontal = 12.dp, vertical = 4.dp)
                 ) {
-                    Text("XEM CHI TIẾT", fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.action_view_details), fontSize = 10.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }

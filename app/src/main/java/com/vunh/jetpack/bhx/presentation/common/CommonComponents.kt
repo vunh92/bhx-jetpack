@@ -14,10 +14,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import com.vunh.jetpack.bhx.R
 import com.vunh.jetpack.bhx.data.remote.ApiService
 import com.vunh.jetpack.bhx.data.repository.HomeRepositoryImpl
 import kotlinx.coroutines.delay
@@ -90,7 +92,12 @@ fun HeaderSection(isHome: Boolean, onMenuClick: () -> Unit = {}) {
                         },
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("BHX", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 10.sp)
+                    Text(
+                        stringResource(R.string.brand_short),
+                        color = Color.Black,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 10.sp
+                    )
                 }
                 Spacer(modifier = Modifier.width(8.dp))
                 Surface(
@@ -104,7 +111,7 @@ fun HeaderSection(isHome: Boolean, onMenuClick: () -> Unit = {}) {
                     ) {
                         Icon(Icons.Default.LocationOn, contentDescription = null, tint = Color.Yellow, modifier = Modifier.size(16.dp))
                         Text(
-                            "Xác nhận vị trí giao hàng",
+                            stringResource(R.string.header_confirm_delivery_location),
                             color = Color.White,
                             fontSize = 14.sp,
                             modifier = Modifier.padding(horizontal = 4.dp)
@@ -136,7 +143,7 @@ fun HeaderSection(isHome: Boolean, onMenuClick: () -> Unit = {}) {
                 Spacer(modifier = Modifier.width(8.dp))
                 Icon(Icons.Default.Search, contentDescription = null, tint = Color.Gray)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Mua đơn tươi sống từ 150k - Freeship 3km", color = Color.Gray, fontSize = 14.sp)
+                Text(stringResource(R.string.header_search_hint), color = Color.Gray, fontSize = 14.sp)
             }
         }
     }

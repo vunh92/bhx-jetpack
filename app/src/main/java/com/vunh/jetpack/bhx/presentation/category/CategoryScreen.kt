@@ -21,12 +21,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.vunh.jetpack.bhx.R
 
 @Composable
 fun CategoryScreen(
@@ -84,14 +86,14 @@ fun CategoryHeader(onClose: () -> Unit, onHomeClick: () -> Unit) {
             modifier = Modifier.clickable { onClose() }.padding(horizontal = 8.dp)
         ) {
             Icon(Icons.Default.Close, contentDescription = null, tint = Color.White)
-            Text("Đóng", color = Color.White, fontSize = 10.sp)
+            Text(stringResource(R.string.category_close), color = Color.White, fontSize = 10.sp)
         }
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier.clickable { onHomeClick() }.padding(horizontal = 8.dp)
         ) {
             Icon(Icons.Default.Home, contentDescription = null, tint = Color.White)
-            Text("Trang chủ", color = Color.White, fontSize = 10.sp)
+            Text(stringResource(R.string.category_home), color = Color.White, fontSize = 10.sp)
         }
         
         Surface(
@@ -105,7 +107,7 @@ fun CategoryHeader(onClose: () -> Unit, onHomeClick: () -> Unit) {
             ) {
                 Icon(Icons.Default.Search, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Tìm nhanh trong nhóm hàng", color = Color.Gray, fontSize = 13.sp)
+                Text(stringResource(R.string.category_search_hint), color = Color.Gray, fontSize = 13.sp)
             }
         }
     }
@@ -152,7 +154,7 @@ fun SubCategoryItem(subCat: SubCat) {
                 .background(Color(0xFFF5F5F5), RoundedCornerShape(8.dp)),
             contentAlignment = Alignment.Center
         ) {
-            Text("IMG", fontSize = 10.sp, color = Color.Gray)
+            Text(stringResource(R.string.image_placeholder), fontSize = 10.sp, color = Color.Gray)
         }
         Spacer(modifier = Modifier.height(4.dp))
         Text(

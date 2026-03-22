@@ -1,3 +1,29 @@
 <resources>
     <string name="app_name">bhx</string>
+    <string name="brand_short">BHX</string>
+    <string name="header_confirm_delivery_location">Xác nhận vị trí giao hàng</string>
+    <string name="header_search_hint">Mua đơn tươi sống từ 150k - Freeship 3km</string>
+    <string name="action_login">ĐĂNG NHẬP</string>
+    <string name="action_continue_shopping">Tiếp tục mua hàng</string>
+    <string name="action_view_details">XEM CHI TIẾT</string>
+    <string name="action_chat">Chat</string>
+    <string name="category_close">Đóng</string>
+    <string name="category_home">Trang chủ</string>
+    <string name="category_search_hint">Tìm nhanh trong nhóm hàng</string>
+    <string name="image_placeholder">IMG</string>
+    <string name="cart_waiting_products">Vẫn còn 10.000+ sản phẩm đang chờ phục vụ %1$s</string>
+    <string name="cart_or">hoặc </string>
+    <string name="cart_view_previous_orders">Xem đơn hàng %1$s vừa đặt trước </string>
+    <string name="order_history_title">Đơn hàng từng mua</string>
+    <string name="order_history_empty_message">Có vẻ bạn chưa có đơn hàng nào\nTiếp tục mua sắm cùng Bách hóa XANH nhé!</string>
+    <string name="notification_title">Thông báo</string>
+    <string name="notification_mark_all_read">Đánh dấu đã đọc tất cả (%1$d)</string>
+    <string name="scanner_camera_hint">Hướng camera vào mã QR</string>
+    <string name="gift_title">Quà của tôi</string>
+    <string name="point_exchange_title">Tích điểm đổi quà</string>
+    <string name="wallet_title">Tiền dư</string>
+    <string name="wallet_available_balance">Đang có</string>
+    <string name="wallet_call_support">Gọi hỗ trợ</string>
+    <string name="wallet_transaction_history">Lịch sử giao dịch</string>
+    <string name="wallet_no_transactions">Chưa có giao dịch nào được thực hiện.</string>
 </resources>

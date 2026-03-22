@@ -18,10 +18,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.vunh.jetpack.bhx.R
 import com.vunh.jetpack.bhx.presentation.common.HeaderSection
 
 @Composable
@@ -56,7 +58,7 @@ fun NotificationScreen(
             }
             
             Text(
-                text = "Thông báo",
+                text = stringResource(R.string.notification_title),
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color.Black,
@@ -64,7 +66,7 @@ fun NotificationScreen(
             )
             
             Text(
-                text = "Đánh dấu đã đọc tất cả (${uiState.unreadCount})",
+                text = stringResource(R.string.notification_mark_all_read, uiState.unreadCount),
                 fontSize = 13.sp,
                 color = Color(0xFF007BFF),
                 modifier = Modifier

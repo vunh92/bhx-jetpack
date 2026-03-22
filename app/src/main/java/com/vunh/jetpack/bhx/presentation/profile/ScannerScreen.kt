@@ -21,6 +21,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -28,6 +29,7 @@ import androidx.compose.ui.unit.sp
 import com.vunh.jetpack.bhx.presentation.common.HeaderSection
 import androidx.compose.foundation.BorderStroke
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.vunh.jetpack.bhx.R
 
 @Composable
 fun ScannerScreen(
@@ -122,7 +124,7 @@ fun ScannerScreen(
                     verticalArrangement = Arrangement.Center
                 ) {
                     Text(
-                        text = "Hướng camera vào mã QR",
+                        text = stringResource(R.string.scanner_camera_hint),
                         color = Color.White,
                         fontSize = 16.sp,
                         modifier = Modifier.padding(bottom = 24.dp)

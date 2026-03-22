@@ -16,7 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -25,6 +25,7 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.vunh.jetpack.bhx.R
 import com.vunh.jetpack.bhx.presentation.common.HeaderSection
 
 @Composable
@@ -55,7 +56,7 @@ fun CartScreen(
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF008848)),
                     shape = RoundedCornerShape(8.dp)
                 ) {
-                    Text("ĐĂNG NHẬP", fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.action_login), fontWeight = FontWeight.Bold)
                 }
             }
         } else {
@@ -91,7 +92,7 @@ fun CartScreen(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Text(
-                    text = "Vẫn còn 10.000+ sản phẩm đang chờ phục vụ $name",
+                    text = stringResource(R.string.cart_waiting_products, name),
                     fontSize = 15.sp,
                     color = Color.DarkGray
                 )
@@ -142,7 +143,7 @@ fun CartScreen(
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF008848)),
                     shape = RoundedCornerShape(8.dp)
                 ) {
-                    Text("Tiếp tục mua hàng", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.action_continue_shopping), fontSize = 16.sp, fontWeight = FontWeight.Bold)
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -151,10 +152,10 @@ fun CartScreen(
                     Text(
                         buildAnnotatedString {
                             withStyle(style = SpanStyle(color = Color.Gray)) {
-                                append("hoặc ")
+                                append(stringResource(R.string.cart_or))
                             }
                             withStyle(style = SpanStyle(color = Color(0xFF008848))) {
-                                append("Xem đơn hàng $name vừa đặt trước ")
+                                append(stringResource(R.string.cart_view_previous_orders, name))
                             }
                         },
                         fontSize = 14.sp

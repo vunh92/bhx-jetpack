@@ -10,12 +10,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.vunh.jetpack.bhx.R
 import com.vunh.jetpack.bhx.presentation.common.HeaderSection
 
 @Composable
@@ -44,12 +45,12 @@ fun OrderHistoryScreen(
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF008848)),
                     shape = RoundedCornerShape(8.dp)
                 ) {
-                    Text("ĐĂNG NHẬP", fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.action_login), fontWeight = FontWeight.Bold)
                 }
             }
         } else {
             Text(
-                text = "Đơn hàng từng mua",
+                text = stringResource(R.string.order_history_title),
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 12.dp),
@@ -107,7 +108,7 @@ fun OrderHistoryScreen(
                 Spacer(modifier = Modifier.height(16.dp))
                 
                 Text(
-                    text = "Có vẻ bạn chưa có đơn hàng nào\nTiếp tục mua sắm cùng Bách hóa XANH nhé!",
+                    text = stringResource(R.string.order_history_empty_message),
                     textAlign = TextAlign.Center,
                     fontSize = 15.sp,
                     lineHeight = 22.sp,

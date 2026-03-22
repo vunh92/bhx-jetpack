@@ -20,6 +20,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.compose.ui.res.stringResource
+import com.vunh.jetpack.bhx.R
 import com.vunh.jetpack.bhx.presentation.common.HeaderSection
 
 @Composable
@@ -64,7 +66,7 @@ fun WalletScreen(
                     )
                 }
                 Text(
-                    text = "Tiền dư",
+                    text = stringResource(R.string.wallet_title),
                     modifier = Modifier.weight(1f),
                     textAlign = TextAlign.Center,
                     fontSize = 16.sp,
@@ -94,7 +96,7 @@ fun WalletScreen(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = "Đang có",
+                    text = stringResource(R.string.wallet_available_balance),
                     fontSize = 15.sp,
                     color = Color.Black
                 )
@@ -118,7 +120,7 @@ fun WalletScreen(
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = "Gọi hỗ trợ",
+                        text = stringResource(R.string.wallet_call_support),
                         color = Color(0xFF007BFF),
                         fontSize = 14.sp
                     )
@@ -144,7 +146,7 @@ fun WalletScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = "Lịch sử giao dịch",
+                    text = stringResource(R.string.wallet_transaction_history),
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color(0xFF2E3A59)
@@ -153,7 +155,7 @@ fun WalletScreen(
                 Spacer(modifier = Modifier.height(16.dp))
                 
                 Text(
-                    text = uiState.transactionMessage,
+                    text = stringResource(R.string.wallet_no_transactions),
                     fontSize = 14.sp,
                     color = Color.LightGray,
                     textAlign = TextAlign.Center
