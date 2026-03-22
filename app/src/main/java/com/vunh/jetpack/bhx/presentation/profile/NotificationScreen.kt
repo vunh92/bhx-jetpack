@@ -12,6 +12,8 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBackIos
 import androidx.compose.material.icons.filled.LocalOffer
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -19,10 +21,17 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.vunh.jetpack.bhx.presentation.common.HeaderSection
 
 @Composable
-fun NotificationScreen(onBack: () -> Unit, onMenuClick: () -> Unit) {
+fun NotificationScreen(
+    onBack: () -> Unit,
+    onMenuClick: () -> Unit,
+    viewModel: NotificationViewModel = hiltViewModel()
+) {
+    val uiState by viewModel.uiState.collectAsState()
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -55,32 +64,17 @@ fun NotificationScreen(onBack: () -> Unit, onMenuClick: () -> Unit) {
             )
             
             Text(
-                text = "Đánh dấu đã đọc tất cả (2)",
+                text = "Đánh dấu đã đọc tất cả (${uiState.unreadCount})",
                 fontSize = 13.sp,
                 color = Color(0xFF007BFF),
                 modifier = Modifier
                     .padding(end = 12.dp)
-                    .clickable { }
+                    .clickable { viewModel.markAllAsRead() }
             )
         }
 
-        val notifications = listOf(
-            NotificationItem(
-                title = "PHIẾU MUA HÀNG GIẢM 20.000đ",
-                content = "Tặng Anh VU mã giảm 20.000đ áp dụng khi mua các sản phẩm dầu gội Nguyên Xuân tại siêu thị hoặc Online Bách Hóa XANH\nMã: 6X0TZW62WP\nHạn sử dụng: 11/03/2026",
-                time = "13:47 04/03/2026",
-                isRead = false
-            ),
-            NotificationItem(
-                title = "PHIẾU MUA HÀNG GIẢM 20.000đ",
-                content = "Tặng Anh VU mã giảm 20.000đ áp dụng khi mua các sản phẩm băng vệ sinh từ 50.000đ tại siêu thị hoặc Online Bách Hóa XANH\nMã: JNUN3B65SU\nHạn sử dụng: 11/03/2026",
-                time = "13:47 04/03/2026",
-                isRead = false
-            )
-        )
-
         LazyColumn(modifier = Modifier.fillMaxSize()) {
-            items(notifications) { item ->
+            items(uiState.notifications) { item ->
                 NotificationRow(item)
                 HorizontalDivider(color = Color(0xFFEEEEEE))
             }

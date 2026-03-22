@@ -11,6 +11,8 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBackIos
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -25,9 +27,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vunh.jetpack.bhx.presentation.common.HeaderSection
 import androidx.compose.foundation.BorderStroke
+import androidx.hilt.navigation.compose.hiltViewModel
 
 @Composable
-fun ScannerScreen(onBack: () -> Unit, onMenuClick: () -> Unit) {
+fun ScannerScreen(
+    onBack: () -> Unit,
+    onMenuClick: () -> Unit,
+    viewModel: ScannerViewModel = hiltViewModel()
+) {
+    val uiState by viewModel.uiState.collectAsState()
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -52,7 +61,7 @@ fun ScannerScreen(onBack: () -> Unit, onMenuClick: () -> Unit) {
                 )
             }
             Text(
-                text = "Quét mã QR",
+                text = uiState.title,
                 modifier = Modifier.weight(1f),
                 textAlign = TextAlign.Center,
                 fontSize = 16.sp,
@@ -73,7 +82,7 @@ fun ScannerScreen(onBack: () -> Unit, onMenuClick: () -> Unit) {
             Spacer(modifier = Modifier.height(24.dp))
             
             Text(
-                text = "Nhập mã QR in trên hoá đơn",
+                text = uiState.hint,
                 fontSize = 14.sp,
                 color = Color.DarkGray
             )
@@ -86,7 +95,7 @@ fun ScannerScreen(onBack: () -> Unit, onMenuClick: () -> Unit) {
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                repeat(6) {
+                repeat(uiState.codeLength) {
                     Box(
                         modifier = Modifier
                             .padding(horizontal = 4.dp)
@@ -155,7 +164,7 @@ fun ScannerScreen(onBack: () -> Unit, onMenuClick: () -> Unit) {
                     )
                     Spacer(modifier = Modifier.width(12.dp))
                     Text(
-                        text = "Chọn ảnh mã QR từ thư viện",
+                        text = uiState.galleryActionLabel,
                         color = Color(0xFF2E3A59),
                         fontWeight = FontWeight.Medium,
                         fontSize = 15.sp

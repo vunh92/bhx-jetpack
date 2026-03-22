@@ -24,15 +24,18 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.vunh.jetpack.bhx.data.local.ProfileManager
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.vunh.jetpack.bhx.presentation.common.HeaderSection
 
 @Composable
-fun CartScreen(onMenuClick: () -> Unit, onNavigateToLogin: () -> Unit) {
-    val context = LocalContext.current
-    val profileManager = remember { ProfileManager(context) }
-    val userProfile = profileManager.getProfile()
-    val isLoggedIn = userProfile != null
+fun CartScreen(
+    onMenuClick: () -> Unit,
+    onNavigateToLogin: () -> Unit,
+    viewModel: CartViewModel = hiltViewModel()
+) {
+    val uiState by viewModel.uiState.collectAsState()
+    val userProfile = uiState.userProfile
+    val isLoggedIn = uiState.isLoggedIn
 
     Column(
         modifier = Modifier
@@ -96,19 +99,11 @@ fun CartScreen(onMenuClick: () -> Unit, onNavigateToLogin: () -> Unit) {
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // Category List (Simplified)
-                val categories = listOf(
-                    "Thịt heo" to Icons.Default.ShoppingBasket,
-                    "Mì ăn liền" to Icons.Default.ShoppingBasket,
-                    "Cá, hải sản" to Icons.Default.ShoppingBasket,
-                    "Thịt gà, vịt" to Icons.Default.ShoppingBasket,
-                    "Trứng gà, vịt" to Icons.Default.ShoppingBasket
-                )
-
                 LazyRow(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(categories) { (title, icon) ->
+                    items(uiState.categories) { category ->
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             modifier = Modifier.width(70.dp)
@@ -120,36 +115,17 @@ fun CartScreen(onMenuClick: () -> Unit, onNavigateToLogin: () -> Unit) {
                                     .background(Color(0xFFF5F5F5)),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Icon(icon, contentDescription = null, tint = Color.Gray)
+                                Icon(
+                                    imageVector = if (category.isViewAll) Icons.Default.Menu else Icons.Default.ShoppingBasket,
+                                    contentDescription = null,
+                                    tint = if (category.isViewAll) Color(0xFF008848) else Color.Gray
+                                )
                             }
                             Text(
-                                text = title,
+                                text = category.title,
                                 fontSize = 11.sp,
                                 textAlign = TextAlign.Center,
                                 lineHeight = 14.sp,
-                                modifier = Modifier.padding(top = 4.dp)
-                            )
-                        }
-                    }
-                    item {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier.width(70.dp)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(60.dp)
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(Color(0xFFF5F5F5)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(Icons.Default.Menu, contentDescription = null, tint = Color(0xFF008848))
-                            }
-                            Text(
-                                text = "Xem tất cả",
-                                fontSize = 11.sp,
-                                color = Color.DarkGray,
-                                textAlign = TextAlign.Center,
                                 modifier = Modifier.padding(top = 4.dp)
                             )
                         }

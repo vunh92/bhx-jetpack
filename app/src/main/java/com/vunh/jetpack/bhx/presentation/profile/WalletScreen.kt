@@ -16,10 +16,25 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.vunh.jetpack.bhx.presentation.common.HeaderSection
 
 @Composable
-fun WalletScreen(balance: String, onBack: () -> Unit, onMenuClick: () -> Unit) {
+fun WalletScreen(
+    balance: String,
+    onBack: () -> Unit,
+    onMenuClick: () -> Unit,
+    viewModel: WalletViewModel = hiltViewModel()
+) {
+    val uiState by viewModel.uiState.collectAsState()
+
+    LaunchedEffect(balance) {
+        viewModel.setBalance(balance)
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -85,7 +100,7 @@ fun WalletScreen(balance: String, onBack: () -> Unit, onMenuClick: () -> Unit) {
                 )
                 
                 Text(
-                    text = "${balance}đ",
+                    text = "${uiState.balance}đ",
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.Black
@@ -138,7 +153,7 @@ fun WalletScreen(balance: String, onBack: () -> Unit, onMenuClick: () -> Unit) {
                 Spacer(modifier = Modifier.height(16.dp))
                 
                 Text(
-                    text = "Chưa có giao dịch nào được thực hiện.",
+                    text = uiState.transactionMessage,
                     fontSize = 14.sp,
                     color = Color.LightGray,
                     textAlign = TextAlign.Center

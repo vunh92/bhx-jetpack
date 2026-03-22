@@ -10,6 +10,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBackIos
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -18,10 +20,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.vunh.jetpack.bhx.presentation.common.HeaderSection
 
 @Composable
-fun PointExchangeScreen(onBack: () -> Unit, onMenuClick: () -> Unit) {
+fun PointExchangeScreen(
+    onBack: () -> Unit,
+    onMenuClick: () -> Unit,
+    viewModel: PointExchangeViewModel = hiltViewModel()
+) {
+    val uiState by viewModel.uiState.collectAsState()
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -70,29 +79,13 @@ fun PointExchangeScreen(onBack: () -> Unit, onMenuClick: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // Simulated Banners based on image
-            PointBanner(
-                color = Color(0xFFFFF176),
-                title = "Hóa Đơn Mua Hàng Bách Hóa Xanh Bất Kỳ",
-                subtitle = "Tặng PMH 15K Mua Omo,Comfort,Sunlight,Clear,Dove,.. Từ 159K"
-            )
-
-            PointBanner(
-                color = Color(0xFF81C784),
-                title = "Mua gạo tích lũy 500.000đ",
-                subtitle = "Nhận phiếu mua hàng 20.000đ"
-            )
-
-            PointBanner(
-                color = Color(0xFFFFB74D),
-                title = "TÍCH LŨY SỮA ABBOTT GROW & PEDIASURE",
-                subtitle = "TẶNG PHIẾU MUA HÀNG TƯƠI SỐNG"
-            )
-
-            PointBanner(
-                color = Color(0xFFF8BBD0),
-                title = "TÍCH LŨY NHẬN QUÀ",
-                subtitle = "VOUCHER GIẢM 3% - 5% - 10%"
-            )
+            uiState.banners.forEach { banner ->
+                PointBanner(
+                    color = banner.color,
+                    title = banner.title,
+                    subtitle = banner.subtitle
+                )
+            }
             
             Spacer(modifier = Modifier.height(32.dp))
         }

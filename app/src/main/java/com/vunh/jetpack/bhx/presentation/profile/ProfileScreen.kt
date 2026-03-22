@@ -29,7 +29,7 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import com.vunh.jetpack.bhx.data.local.ProfileManager
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.vunh.jetpack.bhx.domain.model.UserProfile
 import com.vunh.jetpack.bhx.presentation.common.HeaderSection
 import kotlinx.coroutines.delay
@@ -45,15 +45,12 @@ fun ProfileScreen(
     onCouponClick: () -> Unit = {},
     onSpecialOfferClick: () -> Unit = {},
     onGiftClick: () -> Unit = {},
-    onPointExchangeClick: () -> Unit = {}
+    onPointExchangeClick: () -> Unit = {},
+    viewModel: ProfileViewModel = hiltViewModel()
 ) {
-    val context = LocalContext.current
-    val profileManager = remember { ProfileManager(context) }
-    
-    var showOtpDialog by remember { mutableStateOf(false) }
-    var phoneNumberState by remember { mutableStateOf("") }
-    var userProfile by remember { mutableStateOf(profileManager.getProfile()) }
-    val isLoggedIn = userProfile != null
+    val uiState by viewModel.uiState.collectAsState()
+    val userProfile = uiState.userProfile
+    val isLoggedIn = uiState.isLoggedIn
 
     Column(
         modifier = Modifier
@@ -70,17 +67,13 @@ fun ProfileScreen(
         ) {
             if (!isLoggedIn) {
                 LoginCard(
-                    onContinueClick = { phone ->
-                        phoneNumberState = phone
-                        showOtpDialog = true
-                    }
+                    onContinueClick = viewModel::showOtpDialog
                 )
             } else {
                 LoggedInContent(
                     profile = userProfile!!,
                     onLogout = {
-                        profileManager.clearProfile()
-                        userProfile = null
+                        viewModel.logout()
                     },
                     onNotificationClick = onNotificationClick,
                     onScannerClick = onScannerClick,
@@ -98,21 +91,12 @@ fun ProfileScreen(
         }
     }
 
-    if (showOtpDialog) {
+    if (uiState.showOtpDialog) {
         OtpDialog(
-            phoneNumber = phoneNumberState,
-            onDismiss = { showOtpDialog = false },
+            phoneNumber = uiState.phoneNumber,
+            onDismiss = viewModel::dismissOtpDialog,
             onOtpComplete = {
-                val mockProfile = UserProfile(
-                    name = "Anh Vu",
-                    phoneNumber = phoneNumberState,
-                    rank = "CHƯA CÓ HẠNG",
-                    points = 17450,
-                    memberCode = "450138"
-                )
-                profileManager.saveProfile(mockProfile)
-                userProfile = mockProfile
-                showOtpDialog = false
+                viewModel.completeLogin()
                 onLoginSuccess()
             }
         )

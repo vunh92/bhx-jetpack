@@ -15,14 +15,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.vunh.jetpack.bhx.data.local.ProfileManager
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.vunh.jetpack.bhx.presentation.common.HeaderSection
 
 @Composable
-fun OrderHistoryScreen(onMenuClick: () -> Unit, onNavigateToLogin: () -> Unit) {
-    val context = LocalContext.current
-    val profileManager = remember { ProfileManager(context) }
-    val isLoggedIn = profileManager.isLoggedIn()
+fun OrderHistoryScreen(
+    onMenuClick: () -> Unit,
+    onNavigateToLogin: () -> Unit,
+    viewModel: OrderHistoryViewModel = hiltViewModel()
+) {
+    val uiState by viewModel.uiState.collectAsState()
+    val isLoggedIn = uiState.isLoggedIn
 
     Column(
         modifier = Modifier
@@ -45,9 +48,6 @@ fun OrderHistoryScreen(onMenuClick: () -> Unit, onNavigateToLogin: () -> Unit) {
                 }
             }
         } else {
-            var selectedTab by remember { mutableIntStateOf(0) }
-            val tabs = listOf("Tất cả", "Chờ giao", "Đang giao", "Giao thành công", "Hủy đơn")
-
             Text(
                 text = "Đơn hàng từng mua",
                 modifier = Modifier
@@ -59,19 +59,19 @@ fun OrderHistoryScreen(onMenuClick: () -> Unit, onNavigateToLogin: () -> Unit) {
             )
 
             ScrollableTabRow(
-                selectedTabIndex = selectedTab,
+                selectedTabIndex = uiState.selectedTabIndex,
                 edgePadding = 16.dp,
                 containerColor = Color.White,
                 contentColor = Color(0xFF008848),
                 divider = {},
                 indicator = {}
             ) {
-                tabs.forEachIndexed { index, title ->
+                uiState.tabs.forEachIndexed { index, title ->
                     Tab(
-                        selected = selectedTab == index,
-                        onClick = { selectedTab = index },
+                        selected = uiState.selectedTabIndex == index,
+                        onClick = { viewModel.selectTab(index) },
                         text = {
-                            val isSelected = selectedTab == index
+                            val isSelected = uiState.selectedTabIndex == index
                             Surface(
                                 shape = RoundedCornerShape(16.dp),
                                 color = if (isSelected) Color(0xFF008848).copy(alpha = 0.8f) else Color(0xFFF0F2F5),

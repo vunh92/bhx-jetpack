@@ -15,6 +15,8 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBackIos
 import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -25,10 +27,17 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.vunh.jetpack.bhx.presentation.common.HeaderSection
 
 @Composable
-fun CouponScreen(onBack: () -> Unit, onMenuClick: () -> Unit) {
+fun CouponScreen(
+    onBack: () -> Unit,
+    onMenuClick: () -> Unit,
+    viewModel: CouponViewModel = hiltViewModel()
+) {
+    val uiState by viewModel.uiState.collectAsState()
+
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
@@ -84,12 +93,7 @@ fun CouponScreen(onBack: () -> Unit, onMenuClick: () -> Unit) {
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     modifier = Modifier.padding(bottom = 16.dp)
                 ) {
-                    val coupons = listOf(
-                        CouponInfo("Tặng 20K", "Mua sản phẩm Kem các loại từ 120.000đ", "KT: 15/03/2026"),
-                        CouponInfo("Tặng 50k", "Mua sản phẩm Kem, Sữa chua, Đông mát từ 250.000đ", "KT: 15/03/2026"),
-                        CouponInfo("Tặng 30k", "Mua trái cây nhập khẩu từ 80.000đ", "KT: 15/03/2026")
-                    )
-                    items(coupons) { coupon ->
+                    items(uiState.featuredCoupons) { coupon ->
                         CouponCard(coupon)
                     }
                 }
@@ -97,16 +101,7 @@ fun CouponScreen(onBack: () -> Unit, onMenuClick: () -> Unit) {
                 // Section 2: ƯU ĐÃI CHO KHÁCH MỚI
                 WoodenSectionTitle("ƯU ĐÃI CHO KHÁCH MỚI")
                 
-                val products = listOf(
-                    CouponProduct("Nước mắm cá cơm K...", "29.000đ", "53.000đ", "-45%"),
-                    CouponProduct("Nước xả Comfort diệ...", "168.000đ", "238.000đ", "-29%"),
-                    CouponProduct("Nước xả Comfort tinh...", "168.000đ", "238.000đ", "-29%"),
-                    CouponProduct("Nước xả Comfort hươ...", "168.000đ", "238.000đ", "-29%"),
-                    CouponProduct("Bột giặt Omo Matic...", "168.000đ", "238.000đ", "-28%"),
-                    CouponProduct("Nước xả Comfort...", "168.000đ", "238.000đ", "-29%")
-                )
-                
-                products.chunked(2).forEach { rowItems ->
+                uiState.products.chunked(2).forEach { rowItems ->
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()

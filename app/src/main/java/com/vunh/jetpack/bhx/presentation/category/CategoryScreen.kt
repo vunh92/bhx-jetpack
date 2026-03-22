@@ -26,10 +26,15 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 
 @Composable
-fun CategoryScreen(onClose: () -> Unit, onHomeClick: () -> Unit) {
-    var selectedCategoryId by remember { mutableStateOf("2") } // Mặc định chọn Thịt, cá...
+fun CategoryScreen(
+    onClose: () -> Unit,
+    onHomeClick: () -> Unit,
+    viewModel: CategoryViewModel = hiltViewModel()
+) {
+    val uiState by viewModel.uiState.collectAsState()
 
     Column(modifier = Modifier.fillMaxSize().background(Color.White)) {
         // Header
@@ -39,11 +44,11 @@ fun CategoryScreen(onClose: () -> Unit, onHomeClick: () -> Unit) {
             // Sidebar bên trái
             Box(modifier = Modifier.weight(0.3f).fillMaxHeight().background(Color(0xFFF1F8E9))) {
                 LazyColumn {
-                    items(mainCategories) { category ->
+                    items(uiState.availableMainCategories) { category ->
                         CategorySideItem(
                             category = category,
-                            isSelected = selectedCategoryId == category.id,
-                            onClick = { selectedCategoryId = category.id }
+                            isSelected = uiState.selectedCategoryId == category.id,
+                            onClick = { viewModel.selectCategory(category.id) }
                         )
                     }
                 }
@@ -51,13 +56,12 @@ fun CategoryScreen(onClose: () -> Unit, onHomeClick: () -> Unit) {
 
             // Nội dung bên phải
             Box(modifier = Modifier.weight(0.7f).fillMaxHeight().padding(8.dp)) {
-                val subCats = subCategories.filter { it.mainId == selectedCategoryId }
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(3),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    items(subCats) { subCat ->
+                    items(uiState.selectedSubCategories) { subCat ->
                         SubCategoryItem(subCat)
                     }
                 }

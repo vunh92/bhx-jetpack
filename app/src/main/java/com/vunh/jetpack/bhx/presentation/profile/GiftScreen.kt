@@ -15,6 +15,8 @@ import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.CardGiftcard
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -22,10 +24,17 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.vunh.jetpack.bhx.presentation.common.HeaderSection
 
 @Composable
-fun GiftScreen(onBack: () -> Unit, onMenuClick: () -> Unit) {
+fun GiftScreen(
+    onBack: () -> Unit,
+    onMenuClick: () -> Unit,
+    viewModel: GiftViewModel = hiltViewModel()
+) {
+    val uiState by viewModel.uiState.collectAsState()
+
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
@@ -74,36 +83,12 @@ fun GiftScreen(onBack: () -> Unit, onMenuClick: () -> Unit) {
                 }
             }
 
-            val gifts = listOf(
-                GiftItem(
-                    title = "PHIẾU MUA HÀNG GIẢM 20.000Đ MUA DẦU GỘI NGUYÊN XUÂN BẤT KỲ",
-                    expiry = "Hạn dùng: 11/03/2026",
-                    status = "Còn 2 ngày",
-                    statusColor = Color(0xFFE67E22),
-                    isExpired = false
-                ),
-                GiftItem(
-                    title = "PHIẾU MUA HÀNG GIẢM 20.000Đ MUA BĂNG VỆ SINH TỪ 50.000Đ",
-                    expiry = "Hạn dùng: 11/03/2026",
-                    status = "Còn 2 ngày",
-                    statusColor = Color(0xFFE67E22),
-                    isExpired = false
-                ),
-                GiftItem(
-                    title = "PHIẾU MUA HÀNG GIẢM 40.000Đ MUA GẠO ST 25 TẠI BÁCH HÓA XANH",
-                    expiry = "Đã hết hạn",
-                    status = "",
-                    statusColor = Color.Gray,
-                    isExpired = true
-                )
-            )
-
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                items(gifts) { gift ->
+                items(uiState.gifts) { gift ->
                     GiftCard(gift)
                 }
             }
