@@ -20,27 +20,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.vunh.jetpack.bhx.R
-import com.vunh.jetpack.bhx.data.remote.ApiService
-import com.vunh.jetpack.bhx.data.repository.HomeRepositoryImpl
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import retrofit2.Retrofit
-import retrofit2.converter.gson.GsonConverterFactory
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HeaderSection(isHome: Boolean, onMenuClick: () -> Unit = {}) {
     val coroutineScope = rememberCoroutineScope()
     var isLoading by remember { mutableStateOf(false) }
-    
-    val repository = remember {
-        val retrofit = Retrofit.Builder()
-            .baseUrl("https://jsonplaceholder.typicode.com/")
-            .addConverterFactory(GsonConverterFactory.create())
-            .build()
-        val apiService = retrofit.create(ApiService::class.java)
-        HomeRepositoryImpl(apiService)
-    }
 
     if (isLoading) {
         Dialog(onDismissRequest = { }) {
@@ -81,8 +68,6 @@ fun HeaderSection(isHome: Boolean, onMenuClick: () -> Unit = {}) {
                                 try {
                                     // Simulated delay for visibility
                                     delay(1000)
-                                    val posts = repository.getPosts()
-                                    println("API Result: ${posts.size} posts found")
                                 } catch (e: Exception) {
                                     e.printStackTrace()
                                 } finally {
