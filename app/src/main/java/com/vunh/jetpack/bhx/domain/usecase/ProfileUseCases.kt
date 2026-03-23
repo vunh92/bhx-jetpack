@@ -7,8 +7,6 @@ import com.vunh.jetpack.bhx.presentation.profile.CouponInfo
 import com.vunh.jetpack.bhx.presentation.profile.CouponProduct
 import com.vunh.jetpack.bhx.presentation.profile.GiftItem
 import com.vunh.jetpack.bhx.presentation.profile.GiftScreenUiState
-import com.vunh.jetpack.bhx.presentation.profile.NotificationItem
-import com.vunh.jetpack.bhx.presentation.profile.NotificationUiState
 import com.vunh.jetpack.bhx.presentation.profile.PointExchangeBannerUi
 import com.vunh.jetpack.bhx.presentation.profile.PointExchangeUiState
 import com.vunh.jetpack.bhx.presentation.profile.ProfileUiState
@@ -47,25 +45,6 @@ class LogoutUseCase @Inject constructor(
     operator fun invoke() {
         profileManager.clearProfile()
     }
-}
-
-class GetNotificationUiStateUseCase @Inject constructor() {
-    operator fun invoke(): NotificationUiState = NotificationUiState(
-        notifications = listOf(
-            NotificationItem(
-                title = "PHIẾU MUA HÀNG GIẢM 20.000đ",
-                content = "Tặng Anh VU mã giảm 20.000đ áp dụng khi mua các sản phẩm dầu gội Nguyên Xuân tại siêu thị hoặc Online Bách Hóa XANH\nMã: 6X0TZW62WP\nHạn sử dụng: 11/03/2026",
-                time = "13:47 04/03/2026",
-                isRead = false
-            ),
-            NotificationItem(
-                title = "PHIẾU MUA HÀNG GIẢM 20.000đ",
-                content = "Tặng Anh VU mã giảm 20.000đ áp dụng khi mua các sản phẩm băng vệ sinh từ 50.000đ tại siêu thị hoặc Online Bách Hóa XANH\nMã: JNUN3B65SU\nHạn sử dụng: 11/03/2026",
-                time = "13:47 04/03/2026",
-                isRead = false
-            )
-        )
-    )
 }
 
 class GetScannerUiStateUseCase @Inject constructor() {

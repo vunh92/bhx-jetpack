@@ -2,20 +2,25 @@ package com.vunh.jetpack.bhx.presentation.profile
 
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.vunh.jetpack.bhx.domain.usecase.GetGiftUiStateUseCase
-import com.vunh.jetpack.bhx.domain.usecase.GetNotificationUiStateUseCase
 import com.vunh.jetpack.bhx.domain.usecase.GetPointExchangeUiStateUseCase
 import com.vunh.jetpack.bhx.domain.usecase.GetProfileUiStateUseCase
 import com.vunh.jetpack.bhx.domain.usecase.GetPromotionCollectionUiStateUseCase
 import com.vunh.jetpack.bhx.domain.usecase.GetScannerUiStateUseCase
 import com.vunh.jetpack.bhx.domain.usecase.GetWalletUiStateUseCase
 import com.vunh.jetpack.bhx.domain.usecase.LoginUseCase
+import com.vunh.jetpack.bhx.domain.usecase.MarkAllNotificationsReadUseCase
+import com.vunh.jetpack.bhx.domain.usecase.ObserveNotificationsUseCase
 import com.vunh.jetpack.bhx.domain.usecase.LogoutUseCase
+import com.vunh.jetpack.bhx.domain.usecase.SeedNotificationsUseCase
 import com.vunh.jetpack.bhx.domain.model.UserProfile
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class ProfileUiState(
@@ -69,15 +74,36 @@ data class NotificationUiState(
 
 @HiltViewModel
 class NotificationViewModel @Inject constructor(
-    getNotificationUiStateUseCase: GetNotificationUiStateUseCase
+    private val observeNotificationsUseCase: ObserveNotificationsUseCase,
+    private val seedNotificationsUseCase: SeedNotificationsUseCase,
+    private val markAllNotificationsReadUseCase: MarkAllNotificationsReadUseCase
 ) : ViewModel() {
-    private val _uiState = MutableStateFlow(getNotificationUiStateUseCase())
+    private val _uiState = MutableStateFlow(NotificationUiState())
     val uiState: StateFlow<NotificationUiState> = _uiState.asStateFlow()
 
+    init {
+        observeNotifications()
+        seedNotifications()
+    }
+
+    private fun observeNotifications() {
+        viewModelScope.launch {
+            observeNotificationsUseCase().collectLatest { notifications ->
+                _uiState.value = NotificationUiState(notifications = notifications)
+            }
+        }
+    }
+
+    private fun seedNotifications() {
+        viewModelScope.launch {
+            seedNotificationsUseCase()
+        }
+    }
+
     fun markAllAsRead() {
-        _uiState.value = _uiState.value.copy(
-            notifications = _uiState.value.notifications.map { it.copy(isRead = true) }
-        )
+        viewModelScope.launch {
+            markAllNotificationsReadUseCase()
+        }
     }
 }
 

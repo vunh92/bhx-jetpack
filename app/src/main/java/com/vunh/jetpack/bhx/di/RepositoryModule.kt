@@ -1,9 +1,12 @@
 package com.vunh.jetpack.bhx.di
 
+import com.vunh.jetpack.bhx.data.local.NotificationLocalDataSource
 import com.vunh.jetpack.bhx.data.local.PostLocalDataSource
 import com.vunh.jetpack.bhx.data.remote.PostRemoteDataSource
 import com.vunh.jetpack.bhx.data.repository.HomeRepositoryImpl
+import com.vunh.jetpack.bhx.data.repository.NotificationRepositoryImpl
 import com.vunh.jetpack.bhx.domain.repository.HomeRepository
+import com.vunh.jetpack.bhx.domain.repository.NotificationRepository
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -21,5 +24,13 @@ object RepositoryModule {
         localDataSource: PostLocalDataSource
     ): HomeRepository {
         return HomeRepositoryImpl(remoteDataSource, localDataSource)
+    }
+
+    @Provides
+    @Singleton
+    fun provideNotificationRepository(
+        localDataSource: NotificationLocalDataSource
+    ): NotificationRepository {
+        return NotificationRepositoryImpl(localDataSource)
     }
 }

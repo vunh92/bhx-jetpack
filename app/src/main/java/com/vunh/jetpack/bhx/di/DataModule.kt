@@ -3,6 +3,7 @@ package com.vunh.jetpack.bhx.di
 import android.content.Context
 import androidx.room.Room
 import com.vunh.jetpack.bhx.data.local.AppDatabase
+import com.vunh.jetpack.bhx.data.local.dao.NotificationDao
 import com.vunh.jetpack.bhx.data.local.dao.PostDao
 import com.vunh.jetpack.bhx.data.local.ProfileManager
 import dagger.Module
@@ -23,12 +24,19 @@ object DataModule {
             context,
             AppDatabase::class.java,
             "bhx_database"
-        ).build()
+        )
+            .fallbackToDestructiveMigration()
+            .build()
     }
 
     @Provides
     fun providePostDao(appDatabase: AppDatabase): PostDao {
         return appDatabase.postDao()
+    }
+
+    @Provides
+    fun provideNotificationDao(appDatabase: AppDatabase): NotificationDao {
+        return appDatabase.notificationDao()
     }
 
     @Provides

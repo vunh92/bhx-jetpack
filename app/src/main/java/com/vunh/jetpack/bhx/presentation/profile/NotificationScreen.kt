@@ -136,6 +136,7 @@ fun NotificationRow(item: NotificationItem) {
 }
 
 data class NotificationItem(
+    val id: String,
     val title: String,
     val content: String,
     val time: String,
