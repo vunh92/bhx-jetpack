@@ -21,6 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -32,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.vunh.jetpack.bhx.R
 import com.vunh.jetpack.bhx.domain.model.*
 import com.vunh.jetpack.bhx.presentation.common.HeaderSection
 import kotlinx.coroutines.delay
@@ -148,13 +150,24 @@ fun HomeScreen(
                 // Displaying posts as an example of API data usage
                 if (posts.isNotEmpty()) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        Text("Tin tức mới", fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                        posts.take(5).forEach { post ->
-                            Card(
-                                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                                colors = CardDefaults.cardColors(containerColor = Color.White)
+                        Text(stringResource(R.string.home_api_products_title), fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                        Spacer(modifier = Modifier.height(12.dp))
+                        posts.take(10).chunked(2).forEach { rowItems ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(bottom = 12.dp),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
-                                Text(post.title, modifier = Modifier.padding(8.dp), fontSize = 14.sp)
+                                rowItems.forEach { post ->
+                                    HomeProductEscuelaItem(
+                                        post = post,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                }
+                                if (rowItems.size == 1) {
+                                    Spacer(modifier = Modifier.weight(1f))
+                                }
                             }
                         }
                     }
@@ -162,6 +175,49 @@ fun HomeScreen(
                 
                 Spacer(modifier = Modifier.height(16.dp))
             }
+        }
+    }
+}
+
+@Composable
+private fun HomeProductEscuelaItem(
+    post: Post,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier,
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(10.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(1f)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(Color(0xFFF1F3F5)),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("IMAGE", color = Color.Gray, fontSize = 10.sp)
+            }
+            Spacer(modifier = Modifier.height(10.dp))
+            Text(
+                text = post.title,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = post.body,
+                fontSize = 12.sp,
+                color = Color.Gray,
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis
+            )
         }
     }
 }
