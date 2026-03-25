@@ -1,18 +1,9 @@
 package com.vunh.jetpack.bhx.domain.usecase
 
-import com.vunh.jetpack.bhx.domain.model.Post
-import com.vunh.jetpack.bhx.domain.repository.HomeRepository
-import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 
-class ObservePostsUseCase @Inject constructor(
-    private val homeRepository: HomeRepository
-) {
-    operator fun invoke(): Flow<List<Post>> = homeRepository.observePosts()
-}
-
-class SyncPostsUseCase @Inject constructor(
-    private val homeRepository: HomeRepository
-) {
-    suspend operator fun invoke() = homeRepository.syncPosts()
-}
+data class HomeUseCases @Inject constructor(
+    val syncPosts: SyncPostsUseCase,
+    val getEscuelaProducts: GetEscuelaProductsUseCase,
+    val getDummyCategories: GetDummyCategoriesUseCase
+)

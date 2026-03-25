@@ -1,5 +1,6 @@
 package com.vunh.jetpack.bhx.presentation.home
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -21,18 +22,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
 import androidx.hilt.navigation.compose.hiltViewModel
+import coil.compose.AsyncImage
 import com.vunh.jetpack.bhx.R
 import com.vunh.jetpack.bhx.domain.model.*
 import com.vunh.jetpack.bhx.presentation.common.HeaderSection
@@ -48,7 +47,10 @@ fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val posts by viewModel.posts.collectAsState()
+    val products by viewModel.products.collectAsState()
+    val dummyCategories by viewModel.dummyCategories.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
+    val errorMessage by viewModel.errorMessage.collectAsState()
 
     var showLoginDialog by remember { mutableStateOf(false) }
     var showProductSheet by remember { mutableStateOf(false) }
@@ -113,7 +115,7 @@ fun HomeScreen(
     ) {
         HeaderSection(isHome = true, onMenuClick = onMenuClick)
 
-        if (isLoading) {
+        if (isLoading && posts.isEmpty() && products.isEmpty() && dummyCategories.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(color = Color(0xFF008848))
             }
@@ -124,7 +126,9 @@ fun HomeScreen(
                     .verticalScroll(rememberScrollState())
             ) {
                 MainBannerSection(onClick = onActionClick)
-                PromoGridSection(onClick = onActionClick)
+                
+                DummyCategoriesSection(categories = dummyCategories)
+
                 CategorySection(onClick = onActionClick)
                 EssentialProductsSection(onClick = { product ->
                     if (isLoggedIn) {
@@ -147,32 +151,17 @@ fun HomeScreen(
                     }
                 )
                 
-                // Displaying posts as an example of API data usage
-                if (posts.isNotEmpty()) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(stringResource(R.string.home_api_products_title), fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                        Spacer(modifier = Modifier.height(12.dp))
-                        posts.take(10).chunked(2).forEach { rowItems ->
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(bottom = 12.dp),
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
-                            ) {
-                                rowItems.forEach { post ->
-                                    HomeProductEscuelaItem(
-                                        post = post,
-                                        modifier = Modifier.weight(1f)
-                                    )
-                                }
-                                if (rowItems.size == 1) {
-                                    Spacer(modifier = Modifier.weight(1f))
-                                }
-                            }
-                        }
-                    }
-                }
-                
+                EscuelaProductGridSection(
+                    products = products,
+                    errorMessage = errorMessage,
+                    onRetry = viewModel::fetchProducts
+                )
+
+                HomeApiProductsSection(
+                    posts = posts,
+                    errorMessage = errorMessage,
+                    onRetry = viewModel::refreshPosts
+                )
                 Spacer(modifier = Modifier.height(16.dp))
             }
         }
@@ -180,526 +169,549 @@ fun HomeScreen(
 }
 
 @Composable
-private fun HomeProductEscuelaItem(
+private fun DummyCategoriesSection(
+    categories: List<Category>,
+    modifier: Modifier = Modifier
+) {
+    if (categories.isEmpty()) return
+
+    Column(
+        modifier = modifier.padding(vertical = 16.dp)
+    ) {
+        Text(
+            text = "DUMMY JSON CATEGORIES",
+            modifier = Modifier.padding(horizontal = 16.dp),
+            fontWeight = FontWeight.Bold,
+            fontSize = 16.sp,
+            color = Color(0xFF1976D2)
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        LazyRow(
+            contentPadding = PaddingValues(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items(categories) { category ->
+                Surface(
+                    color = Color.White,
+                    shape = RoundedCornerShape(20.dp),
+                    border = BorderStroke(1.dp, Color(0xFFBBDEFB)),
+                    modifier = Modifier.clickable { }
+                ) {
+                    Text(
+                        text = category.name.replaceFirstChar { it.uppercase() },
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                        fontSize = 13.sp,
+                        color = Color(0xFF0D47A1)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun EscuelaProductGridSection(
+    products: List<Product>,
+    errorMessage: String?,
+    onRetry: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier.padding(16.dp)
+    ) {
+        Text(
+            text = "SẢN PHẨM MỚI (ESCUELA API)",
+            fontWeight = FontWeight.Bold,
+            fontSize = 18.sp,
+            color = Color(0xFF008848)
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+
+        when {
+            products.isNotEmpty() -> {
+                products.chunked(2).forEach { rowItems ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        rowItems.forEach { product ->
+                            EscuelaProductItem(
+                                product = product,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                        if (rowItems.size == 1) {
+                            Spacer(modifier = Modifier.weight(1f))
+                        }
+                    }
+                }
+            }
+
+            errorMessage != null && products.isEmpty() -> {
+                ApiProductStatusCard(
+                    message = errorMessage,
+                    actionLabel = stringResource(R.string.home_retry),
+                    onActionClick = onRetry
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun EscuelaProductItem(
+    product: Product,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier,
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        shape = RoundedCornerShape(12.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(10.dp)
+        ) {
+            AsyncImage(
+                model = product.images.firstOrNull(),
+                contentDescription = product.title,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(1f)
+                    .clip(RoundedCornerShape(10.dp)),
+                contentScale = ContentScale.Crop
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+            Text(
+                text = product.title,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                color = Color.Black
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = product.categoryName,
+                fontSize = 12.sp,
+                color = Color.Gray
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "${product.price}$",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.ExtraBold,
+                color = Color(0xFFE67E22)
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Button(
+                onClick = { },
+                modifier = Modifier.fillMaxWidth().height(36.dp),
+                shape = RoundedCornerShape(4.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF008848)),
+                contentPadding = PaddingValues(0.dp)
+            ) {
+                Text("MUA", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+            }
+        }
+    }
+}
+
+@Composable
+private fun HomeApiProductsSection(
+    posts: List<Post>,
+    errorMessage: String?,
+    onRetry: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    if (posts.isEmpty()) return
+    
+    Column(
+        modifier = modifier.padding(16.dp)
+    ) {
+        Text(
+            text = stringResource(R.string.home_api_products_title),
+            fontWeight = FontWeight.Bold,
+            fontSize = 18.sp
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+
+        when {
+            posts.isNotEmpty() -> {
+                posts.forEach { post ->
+                    HomeApiProductItem(
+                        post = post,
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)
+                    )
+                }
+            }
+
+            errorMessage != null && posts.isEmpty() -> {
+                ApiProductStatusCard(
+                    message = errorMessage,
+                    actionLabel = stringResource(R.string.home_retry),
+                    onActionClick = onRetry
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun HomeApiProductItem(
     post: Post,
     modifier: Modifier = Modifier
 ) {
     Card(
         modifier = modifier,
         colors = CardDefaults.cardColors(containerColor = Color.White),
-        shape = RoundedCornerShape(12.dp)
+        shape = RoundedCornerShape(8.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(60.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(Color(0xFFE8F5E9)),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = post.id.toString(),
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF008848)
+                )
+            }
+            Spacer(modifier = Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = post.title,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "User ID: ${post.userId}",
+                    fontSize = 12.sp,
+                    color = Color.Gray
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ApiProductStatusCard(
+    message: String,
+    actionLabel: String,
+    onActionClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF3E0)),
+        shape = RoundedCornerShape(8.dp)
     ) {
         Column(
-            modifier = Modifier.padding(10.dp)
+            modifier = Modifier.padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = message,
+                color = Color(0xFFE65100),
+                textAlign = TextAlign.Center,
+                fontSize = 14.sp
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            TextButton(onClick = onActionClick) {
+                Text(actionLabel, color = Color(0xFFEF6C00), fontWeight = FontWeight.Bold)
+            }
+        }
+    }
+}
+
+@Composable
+private fun MainBannerSection(onClick: () -> Unit) {
+    val banners = listOf(
+        Color(0xFFFFD180),
+        Color(0xFF80D8FF),
+        Color(0xFFA7FFEB)
+    )
+    val pagerState = rememberPagerState(pageCount = { banners.size })
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            yield()
+            delay(3000)
+            pagerState.animateScrollToPage((pagerState.currentPage + 1) % banners.size)
+        }
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(180.dp)
+            .padding(16.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick)
+    ) {
+        HorizontalPager(
+            state = pagerState,
+            modifier = Modifier.fillMaxSize()
+        ) { page ->
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(banners[page]),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "KHUYẾN MÃI HẤP DẪN ${page + 1}",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 20.sp,
+                    color = Color.White
+                )
+            }
+        }
+
+        Row(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 8.dp),
+            horizontalArrangement = Arrangement.Center
+        ) {
+            repeat(banners.size) { iteration ->
+                val color = if (pagerState.currentPage == iteration) Color.White else Color.White.copy(alpha = 0.5f)
+                Box(
+                    modifier = Modifier
+                        .padding(2.dp)
+                        .clip(CircleShape)
+                        .background(color)
+                        .size(6.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun CategorySection(onClick: () -> Unit) {
+    val categories = listOf(
+        "Thịt, cá, trứng", "Rau, củ, trái cây", "Gạo, mì, gia vị", "Sữa, đồ uống",
+        "Bánh kẹo, ăn vặt", "Vệ sinh nhà cửa", "Chăm sóc cá nhân", "Đồ dùng gia đình"
+    )
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+            .background(Color.White, RoundedCornerShape(12.dp))
+            .padding(16.dp)
+    ) {
+        Text(
+            text = "DANH MỤC NGÀNH HÀNG",
+            fontWeight = FontWeight.Bold,
+            fontSize = 16.sp,
+            modifier = Modifier.padding(bottom = 12.dp)
+        )
+
+        categories.chunked(4).forEach { rowCategories ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                rowCategories.forEach { category ->
+                    CategoryItem(name = category, onClick = onClick)
+                }
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+    }
+}
+
+@Composable
+private fun CategoryItem(name: String, onClick: () -> Unit) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .width(70.dp)
+            .clickable(onClick = onClick)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(48.dp)
+                .background(Color(0xFFE8F5E9), CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            // Placeholder for icon
+        }
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = name,
+            fontSize = 10.sp,
+            textAlign = TextAlign.Center,
+            lineHeight = 12.sp,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+@Composable
+private fun EssentialProductsSection(onClick: (ProductItem) -> Unit) {
+    val products = listOf(
+        ProductItem("Nước mắm Nam Ngư 750ml", 45000, 39000, "15%"),
+        ProductItem("Dầu ăn Tường An 1L", 52000, 48000, "8%"),
+        ProductItem("Gạo ST25 túi 5kg", 195000, 185000, "5%"),
+        ProductItem("Mì Hảo Hảo tôm chua cay", 4500, 4200, "7%")
+    )
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+            .background(Color(0xFFE8F5E9), RoundedCornerShape(12.dp))
+            .padding(16.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "HÀNG THIẾT YẾU - GIÁ RẺ",
+                fontWeight = FontWeight.Bold,
+                fontSize = 16.sp,
+                color = Color(0xFF008848)
+            )
+            Icon(
+                imageVector = Icons.Default.ChevronRight,
+                contentDescription = null,
+                tint = Color(0xFF008848)
+            )
+        }
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            products.forEach { product ->
+                ProductItemCard(product = product, onClick = { onClick(product) }, modifier = Modifier.weight(1f))
+            }
+        }
+    }
+}
+
+@Composable
+private fun ProductItemCard(product: ProductItem, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    Card(
+        modifier = modifier.clickable(onClick = onClick),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        shape = RoundedCornerShape(8.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(8.dp)
         ) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .aspectRatio(1f)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(Color(0xFFF1F3F5)),
-                contentAlignment = Alignment.Center
-            ) {
-                Text("IMAGE", color = Color.Gray, fontSize = 10.sp)
-            }
-            Spacer(modifier = Modifier.height(10.dp))
-            Text(
-                text = post.title,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Bold,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
+                    .background(Color(0xFFF5F5F5))
             )
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = post.body,
+                text = product.name,
+                fontSize = 11.sp,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                lineHeight = 13.sp
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "${product.price}đ",
                 fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.Red
+            )
+            Text(
+                text = "${product.originalPrice}đ",
+                fontSize = 10.sp,
                 color = Color.Gray,
-                maxLines = 3,
-                overflow = TextOverflow.Ellipsis
+                textDecoration = TextDecoration.LineThrough
             )
         }
     }
 }
 
 @Composable
-fun IngredientSelectionBottomSheet(recipeName: String, onDismiss: () -> Unit) {
-    Box(
+private fun DailyMarketSection(
+    onCategoryClick: () -> Unit,
+    onRecipeClick: (String) -> Unit,
+    onProductClick: (ProductItem) -> Unit
+) {
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .fillMaxHeight(0.9f) // Allow sheet to expand
+            .padding(16.dp)
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(bottom = 80.dp) // Space for fixed button
-                .verticalScroll(rememberScrollState())
-        ) {
-            // Header
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Nguyên liệu món $recipeName",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFF2E3A59)
-                )
-                IconButton(
-                    onClick = onDismiss,
-                    modifier = Modifier
-                        .size(32.dp)
-                        .background(Color(0xFFE4E9F2), CircleShape)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Close,
-                        contentDescription = "Close",
-                        tint = Color(0xFF8F9BB3),
-                        modifier = Modifier.size(16.dp)
-                    )
-                }
-            }
+        Text(
+            text = "ĐI CHỢ MỖI NGÀY",
+            fontWeight = FontWeight.Bold,
+            fontSize = 18.sp
+        )
+        Spacer(modifier = Modifier.height(12.dp))
 
-            // Cooking instructions link
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-                    .clickable { },
-                color = Color(0xFFF7F9FC),
-                shape = RoundedCornerShape(8.dp)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // Left column: categories
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Row(
-                    modifier = Modifier.padding(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+                listOf("Thịt các loại", "Cá, hải sản", "Trứng các loại", "Rau củ tươi").forEach { cat ->
                     Box(
                         modifier = Modifier
-                            .size(48.dp)
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(Color.LightGray),
-                        contentAlignment = Alignment.Center
+                            .fillMaxWidth()
+                            .height(40.dp)
+                            .background(Color.White, RoundedCornerShape(8.dp))
+                            .border(1.dp, Color(0xFFE0E0E0), RoundedCornerShape(8.dp))
+                            .clickable(onClick = onCategoryClick)
+                            .padding(horizontal = 8.dp),
+                        contentAlignment = Alignment.CenterStart
                     ) {
-                        Text("IMG", fontSize = 10.sp, color = Color.Gray)
-                    }
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Text(
-                        text = "Xem hướng dẫn chế biến",
-                        modifier = Modifier.weight(1f),
-                        fontSize = 14.sp,
-                        color = Color.Black
-                    )
-                    Icon(Icons.Default.ChevronRight, contentDescription = null, tint = Color.Gray)
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Main ingredients section
-            Text(
-                text = "Lựa chọn loại nguyên liệu chính",
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                fontSize = 14.sp,
-                color = Color.Gray
-            )
-
-            LazyRow(
-                contentPadding = PaddingValues(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                items(4) { index ->
-                    IngredientOptionCard(index)
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            LazyRow(
-                contentPadding = PaddingValues(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                items(3) { index ->
-                    IngredientOptionCard(index + 4)
-                }
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Extra spices section
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Color(0xFFF7F9FC))
-                    .padding(16.dp)
-            ) {
-                Text(
-                    text = "Mua thêm gia vị",
-                    fontSize = 14.sp,
-                    color = Color.Gray,
-                    modifier = Modifier.padding(bottom = 12.dp)
-                )
-                
-                LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    items(3) {
-                        SuggestedProductCard()
+                        Text(text = cat, fontSize = 12.sp)
                     }
                 }
             }
-            Spacer(modifier = Modifier.height(16.dp))
-        }
 
-        // Fixed Add to cart button at the bottom
-        Surface(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth(),
-            color = Color.White,
-            shadowElevation = 8.dp
-        ) {
-            Button(
-                onClick = { /* Add to cart logic */ },
+            // Right column: Featured recipe or product
+            Card(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp)
-                    .height(50.dp),
-                shape = RoundedCornerShape(8.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF9EABB8))
+                    .weight(1.5f)
+                    .height(184.dp)
+                    .clickable { onRecipeClick("Canh chua cá lóc") },
+                shape = RoundedCornerShape(12.dp)
             ) {
-                Text(
-                    text = "THÊM VÀO GIỎ",
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp
-                )
-            }
-        }
-    }
-}
-
-@Composable
-fun IngredientOptionCard(index: Int) {
-    val names = listOf(
-        "Ba rọi heo C.P 300...", "Sườn non heo C.P...", "Sườn non heo Bra...", "Thịt nạc heo...",
-        "Trứng gà tươi hộp...", "Trứng cút hộp 30...", "Trứng vịt hộp 10..."
-    )
-    val prices = listOf("44.145₫", "63.175₫", "47.025₫", "41.860₫", "27.000₫", "25.000₫", "32.000₫")
-    val units = listOf("/Vỉ 0.3 Kg", "/Vỉ 0.3 Kg", "/Túi 0.3 Kg", "/Vỉ 0.3 Kg", "", "", "")
-
-    Card(
-        modifier = Modifier
-            .width(140.dp)
-            .border(1.dp, Color(0xFFEDF1F7), RoundedCornerShape(8.dp)),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        shape = RoundedCornerShape(8.dp)
-    ) {
-        Column(modifier = Modifier.padding(8.dp)) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(100.dp)
-                    .background(Color(0xFFF7F9FC)),
-                contentAlignment = Alignment.Center
-            ) {
-                Text("IMAGE", color = Color.LightGray, fontSize = 10.sp)
-                // Badge for CP or Import
-                if (index < 4) {
-                    Box(modifier = Modifier.align(Alignment.TopStart).padding(4.dp).size(20.dp).background(Color.Red, CircleShape), contentAlignment = Alignment.Center) {
-                        Text("CP", color = Color.White, fontSize = 8.sp, fontWeight = FontWeight.Bold)
-                    }
-                }
-            }
-            
-            Spacer(modifier = Modifier.height(8.dp))
-            
-            Text(
-                text = names[index % names.size],
-                fontSize = 12.sp,
-                maxLines = 2,
-                minLines = 2,
-                lineHeight = 16.sp,
-                color = Color.Black
-            )
-            
-            Spacer(modifier = Modifier.height(4.dp))
-            
-            Column {
-                Row(verticalAlignment = Alignment.Bottom) {
-                    Text(
-                        text = prices[index % prices.size],
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.Black
-                    )
-                    Text(
-                        text = units[index % units.size],
-                        fontSize = 10.sp,
-                        color = Color.Gray,
-                        modifier = Modifier.padding(start = 2.dp, bottom = 1.dp)
-                    )
-                }
-                if (index == 0) {
-                    Text("Tối đa 10 sản phẩm/ đơn", color = Color(0xFFE67E22), fontSize = 10.sp, lineHeight = 12.sp)
-                }
-            }
-            
-            Spacer(modifier = Modifier.height(12.dp))
-            
-            OutlinedButton(
-                onClick = { },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(36.dp),
-                shape = RoundedCornerShape(4.dp),
-                border = borderStroke(1.dp, Color(0xFFE8F5E9)),
-                colors = ButtonDefaults.outlinedButtonColors(containerColor = Color(0xFFF1F8E9))
-            ) {
-                Text("MUA", color = Color(0xFF008848), fontSize = 12.sp, fontWeight = FontWeight.Bold)
-            }
-        }
-    }
-}
-
-@Composable
-fun ProductSelectionBottomSheet(productName: String, onDismiss: () -> Unit) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .wrapContentHeight()
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 80.dp)
-                .verticalScroll(rememberScrollState())
-        ) {
-            // Header
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Chọn mua $productName",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFF2E3A59)
-                )
-                IconButton(
-                    onClick = onDismiss,
-                    modifier = Modifier
-                        .size(32.dp)
-                        .background(Color(0xFFE4E9F2), CircleShape)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Close,
-                        contentDescription = "Close",
-                        tint = Color(0xFF8F9BB3),
-                        modifier = Modifier.size(16.dp)
-                    )
-                }
-            }
-
-            // Product Options List
-            LazyRow(
-                contentPadding = PaddingValues(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                items(4) { index ->
-                    ProductOptionCard(index)
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            Text(
-                text = "Xem tất cả >",
-                color = Color(0xFF008848),
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier
-                    .align(Alignment.End)
-                    .padding(end = 16.dp)
-                    .clickable { }
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Suggested items
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Color(0xFFF7F9FC))
-                    .padding(16.dp)
-            ) {
-                Text(
-                    text = "Gợi ý mua thêm",
-                    fontSize = 14.sp,
-                    color = Color.Gray,
-                    modifier = Modifier.padding(bottom = 12.dp)
-                )
-                
-                LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    items(3) {
-                        SuggestedProductCard()
-                    }
-                }
-            }
-            Spacer(modifier = Modifier.height(16.dp))
-        }
-
-        // Fixed Add to cart button
-        Surface(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth(),
-            color = Color.White,
-            shadowElevation = 8.dp
-        ) {
-            Button(
-                onClick = { /* Add to cart logic */ },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp)
-                    .height(50.dp),
-                shape = RoundedCornerShape(8.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF9EABB8))
-            ) {
-                Text(
-                    text = "THÊM VÀO GIỎ",
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp
-                )
-            }
-        }
-    }
-}
-
-@Composable
-fun ProductOptionCard(index: Int) {
-    val names = listOf("Thùng 30 gói mì 3...", "Mì xào tương đen...", "Thùng 20 gói mì tr...", "Mì Omachi l...")
-    val prices = listOf("90.000₫", "11.500₫", "124.000₫", "9.000₫")
-    val discounts = listOf("-6%", "-15%", "-20%", null)
-
-    Card(
-        modifier = Modifier
-            .width(140.dp)
-            .border(1.dp, Color(0xFFEDF1F7), RoundedCornerShape(8.dp)),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        shape = RoundedCornerShape(8.dp)
-    ) {
-        Column(modifier = Modifier.padding(8.dp)) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(100.dp)
-                    .background(Color(0xFFF7F9FC)),
-                contentAlignment = Alignment.Center
-            ) {
-                Text("IMAGE", color = Color.LightGray, fontSize = 10.sp)
-            }
-            
-            Spacer(modifier = Modifier.height(8.dp))
-            
-            Text(
-                text = names[index % names.size],
-                fontSize = 12.sp,
-                maxLines = 2,
-                minLines = 2,
-                lineHeight = 16.sp,
-                color = Color.Black
-            )
-            
-            Spacer(modifier = Modifier.height(4.dp))
-            
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = prices[index % prices.size],
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.Black
-                )
-                discounts[index % discounts.size]?.let {
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = it,
-                        color = Color.White,
-                        fontSize = 9.sp,
-                        fontWeight = FontWeight.Bold,
+                Box(modifier = Modifier.fillMaxSize()) {
+                    Box(modifier = Modifier.fillMaxSize().background(Color(0xFFBDBDBD)))
+                    Column(
                         modifier = Modifier
-                            .background(Color.Red, RoundedCornerShape(2.dp))
-                            .padding(horizontal = 2.dp)
-                    )
-                }
-            }
-            
-            Spacer(modifier = Modifier.height(12.dp))
-            
-            OutlinedButton(
-                onClick = { },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(36.dp),
-                shape = RoundedCornerShape(4.dp),
-                border = borderStroke(1.dp, Color(0xFFE8F5E9)),
-                colors = ButtonDefaults.outlinedButtonColors(containerColor = Color(0xFFF1F8E9))
-            ) {
-                Text("MUA", color = Color(0xFF008848), fontSize = 12.sp, fontWeight = FontWeight.Bold)
-            }
-        }
-    }
-}
-
-@Composable
-fun SuggestedProductCard() {
-    Card(
-        modifier = Modifier
-            .width(220.dp)
-            .height(80.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        shape = RoundedCornerShape(8.dp)
-    ) {
-        Row(modifier = Modifier.fillMaxSize().padding(8.dp)) {
-            Box(
-                modifier = Modifier
-                    .size(64.dp)
-                    .background(Color(0xFFF7F9FC)),
-                contentAlignment = Alignment.Center
-            ) {
-                Text("IMG", fontSize = 10.sp, color = Color.LightGray)
-            }
-            
-            Spacer(modifier = Modifier.width(8.dp))
-            
-            Column(modifier = Modifier.weight(1f)) {
-                Text("Xúc xích heo tiệt...", fontSize = 12.sp, maxLines = 1)
-                Text("25.000₫", fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                
-                Spacer(modifier = Modifier.weight(1f))
-                
-                Surface(
-                    color = Color(0xFFF1F8E9),
-                    shape = RoundedCornerShape(4.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(24.dp)
-                        .clickable { }
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Text("MUA", color = Color(0xFF008848), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                            .align(Alignment.BottomStart)
+                            .background(Color.Black.copy(alpha = 0.6f))
+                            .fillMaxWidth()
+                            .padding(8.dp)
+                    ) {
+                        Text(text = "Gợi ý hôm nay", color = Color.Yellow, fontSize = 10.sp)
+                        Text(text = "Canh chua cá lóc", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                     }
                 }
             }
@@ -709,594 +721,137 @@ fun SuggestedProductCard() {
 
 @Composable
 fun LoginRequiredDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
-    Dialog(onDismissRequest = onDismiss) {
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White)
-        ) {
-            Column(
-                modifier = Modifier.padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text = "Tính năng này cần đăng nhập để sử dụng. Anh/Chị vui lòng đăng nhập để tiếp tục",
-                    fontSize = 16.sp,
-                    color = Color.Black,
-                    textAlign = TextAlign.Center,
-                    lineHeight = 22.sp
-                )
-                
-                Spacer(modifier = Modifier.height(24.dp))
-                
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    OutlinedButton(
-                        onClick = onDismiss,
-                        modifier = Modifier.weight(1f).height(48.dp),
-                        shape = RoundedCornerShape(8.dp),
-                        border = borderStroke(1.dp, Color(0xFF008848))
-                    ) {
-                        Text("Hủy", color = Color(0xFF008848), fontWeight = FontWeight.Bold)
-                    }
-                    
-                    Button(
-                        onClick = onConfirm,
-                        modifier = Modifier.weight(1f).height(48.dp),
-                        shape = RoundedCornerShape(8.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF008848))
-                    ) {
-                        Text("Đồng ý", color = Color.White, fontWeight = FontWeight.Bold)
-                    }
-                }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Đăng nhập") },
+        text = { Text("Vui lòng đăng nhập để thực hiện chức năng này.") },
+        confirmButton = {
+            Button(onClick = onConfirm, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF008848))) {
+                Text("Đăng nhập")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Bỏ qua", color = Color.Gray)
             }
         }
-    }
+    )
 }
 
-// Helper for border stroke
 @Composable
-fun borderStroke(width: androidx.compose.ui.unit.Dp, color: Color) = androidx.compose.foundation.BorderStroke(width, color)
-
-@Composable
-fun MainBannerSection(onClick: () -> Unit) {
-    val bannerCount = 6
-    val pagerState = rememberPagerState(pageCount = { bannerCount })
-
-    LaunchedEffect(Unit) {
-        while (true) {
-            yield()
-            delay(3000)
-            val nextPage = (pagerState.currentPage + 1) % bannerCount
-            pagerState.animateScrollToPage(nextPage)
-        }
-    }
-
-    Box(
+fun ProductSelectionBottomSheet(productName: String, onDismiss: () -> Unit) {
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .height(180.dp)
-            .clickable { onClick() }
+            .padding(16.dp)
     ) {
-        HorizontalPager(
-            state = pagerState,
-            modifier = Modifier.fillMaxSize()
-        ) { page ->
-            val bgColor = when (page % 3) {
-                0 -> Color(0xFF004D40)
-                1 -> Color(0xFF00695C)
-                else -> Color(0xFF00796B)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(text = "Chọn định lượng", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+            IconButton(onClick = onDismiss) {
+                Icon(Icons.Default.Close, contentDescription = "Close")
             }
-            
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(bgColor)
-            ) {
-                Column(
-                    modifier = Modifier.fillMaxSize().padding(16.dp),
-                    verticalArrangement = Arrangement.Center
+        }
+        
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        Text(text = productName, fontWeight = FontWeight.Medium, fontSize = 16.sp)
+        
+        Spacer(modifier = Modifier.height(24.dp))
+        
+        // Quantity selectors (mock)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            listOf("300g", "500g", "1kg").forEach { weight ->
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .border(1.dp, Color(0xFF008848), RoundedCornerShape(8.dp))
+                        .padding(vertical = 12.dp),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Text("Ưu đãi tháng ${page + 1}", color = Color.White, fontSize = 14.sp)
-                    Text(
-                        "NÂNG CHUẨN AN TOÀN\nBANNER KHUYẾN MÃI ${page + 1}",
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 20.sp,
-                        lineHeight = 24.sp
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Surface(
-                        color = Color(0xFF8CC63F),
-                        shape = RoundedCornerShape(20.dp)
-                    ) {
-                        Text(
-                            "Xem ngay",
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-                            color = Color.White,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
+                    Text(text = weight, color = Color(0xFF008848))
                 }
             }
         }
         
-        Row(
-            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        Spacer(modifier = Modifier.height(24.dp))
+        
+        Button(
+            onClick = onDismiss,
+            modifier = Modifier.fillMaxWidth().height(48.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF008848))
         ) {
-            repeat(bannerCount) { index ->
-                val isSelected = pagerState.currentPage == index
-                Box(
-                    modifier = Modifier
-                        .size(if (isSelected) 12.dp else 6.dp, 6.dp)
-                        .clip(CircleShape)
-                        .background(if (isSelected) Color.White else Color.White.copy(alpha = 0.5f))
-                )
-            }
+            Text("THÊM VÀO GIỎ HÀNG", fontWeight = FontWeight.Bold)
         }
+        
+        Spacer(modifier = Modifier.height(16.dp))
     }
 }
 
 @Composable
-fun PromoGridSection(onClick: () -> Unit) {
-    Column(modifier = Modifier.padding(8.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            PromoCard(
-                title = "Mua hàng Unilever X2 X3 TÍCH ĐIỂM",
-                backgroundColor = Color(0xFFFFEBEE),
-                modifier = Modifier.weight(1f).clickable { onClick() }
-            )
-            PromoCard(
-                title = "GIẶT - XẢ GIÁ TỐT",
-                backgroundColor = Color(0xFFE3F2FD),
-                modifier = Modifier.weight(1f).clickable { onClick() }
-            )
-        }
-        Spacer(modifier = Modifier.height(8.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            PromoCard(
-                title = "DEAL ĐÃ GIÁ HỜI CÙNG PEPSI",
-                backgroundColor = Color(0xFFE8EAF6),
-                modifier = Modifier.weight(1f).clickable { onClick() },
-                height = 100.dp
-            )
-            PromoCard(
-                title = "GÓP BÀN CHẢI CŨ DỰNG TƯƠNG LAI XANH",
-                backgroundColor = Color(0xFFE8F5E9),
-                modifier = Modifier.weight(1f).clickable { onClick() },
-                height = 100.dp
-            )
-        }
-    }
-}
-
-@Composable
-fun PromoCard(title: String, backgroundColor: Color, modifier: Modifier = Modifier, height: androidx.compose.ui.unit.Dp = 180.dp) {
-    Card(
-        modifier = modifier.height(height),
-        shape = RoundedCornerShape(8.dp),
-        colors = CardDefaults.cardColors(containerColor = backgroundColor)
-    ) {
-        Box(modifier = Modifier.fillMaxSize().padding(8.dp)) {
-            Text(
-                title,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.align(Alignment.TopCenter),
-                color = Color.Black
-            )
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(80.dp)
-                    .align(Alignment.Center)
-                    .background(Color.White.copy(alpha = 0.5f), RoundedCornerShape(4.dp)),
-                contentAlignment = Alignment.Center
-            ) {
-                Text("IMAGE", color = Color.Gray, fontSize = 10.sp)
-            }
-        }
-    }
-}
-
-@Composable
-fun CategorySection(onClick: () -> Unit) {
-    val categories = listOf(
-        CategoryItem("FLASH SALE", Color.Red),
-        CategoryItem("Giặt xả", Color.Transparent, "-35%"),
-        CategoryItem("Bia", Color.Transparent),
-        CategoryItem("Nước suối", Color.Transparent, "79k/thùng"),
-        CategoryItem("Sữa tươi", Color.Transparent),
-        CategoryItem("Xúc xích", Color.Transparent)
-    )
-
-    LazyRow(
-        contentPadding = PaddingValues(16.dp),
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
-        modifier = Modifier.background(Color.White)
-    ) {
-        items(categories) { item ->
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.width(70.dp).clickable { onClick() }
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(50.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(Color(0xFFF0F0F0)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    if (item.name == "FLASH SALE") {
-                        Text("SALE", color = Color.Red, fontWeight = FontWeight.Bold, fontSize = 10.sp)
-                    } else {
-                        Box(modifier = Modifier.fillMaxSize().padding(8.dp).background(Color.LightGray))
-                    }
-                    if (item.badge != null) {
-                        Text(
-                            item.badge,
-                            modifier = Modifier
-                                .align(Alignment.TopEnd)
-                                .background(Color.Red, RoundedCornerShape(bottomStart = 4.dp))
-                                .padding(horizontal = 4.dp),
-                            color = Color.White,
-                            fontSize = 8.sp
-                        )
-                    }
-                }
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    item.name,
-                    fontSize = 12.sp,
-                    textAlign = TextAlign.Center,
-                    maxLines = 2,
-                    lineHeight = 14.sp,
-                    color = if (item.name == "FLASH SALE") Color(0xFF008848) else Color.Black,
-                    fontWeight = if (item.name == "FLASH SALE") FontWeight.Bold else FontWeight.Normal
-                )
-            }
-        }
-    }
-}
-
-@Composable
-fun EssentialProductsSection(onClick: (ProductItem) -> Unit) {
-    Column(modifier = Modifier.padding(16.dp)) {
-        Text(
-            "SẢN PHẨM THIẾT YẾU",
-            color = Color(0xFFE67E22),
-            fontWeight = FontWeight.Bold,
-            fontSize = 18.sp
-        )
-        Spacer(modifier = Modifier.height(12.dp))
-
-        val products = listOf(
-            ProductItem("MÌ 3 MIỀN 65G", "CHỈ 90K/THÙNG", Color.Red),
-            ProductItem("SỮA THÙNG", "GIÁ TIẾT KIỆM", Color(0xFFE91E63)),
-            ProductItem("NƯỚC KHOÁNG", "TỪ 79K", Color(0xFF1976D2)),
-            ProductItem("SỮA CHUA", "MUA 2 TẶNG 1", Color(0xFFE91E63)),
-            ProductItem("KEM", "MUA 2 TẶNG 1", Color(0xFFE91E63)),
-            ProductItem("BÁNH KARO", "2 GÓI 59K", Color(0xFFF57C00))
-        )
-
-        val rows = products.chunked(2)
-        rows.forEach { rowProducts ->
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                rowProducts.forEach { product ->
-                    ProductCard(product, modifier = Modifier.weight(1f).clickable { onClick(product) })
-                }
-                if (rowProducts.size < 2) {
-                    Spacer(modifier = Modifier.weight(1f))
-                }
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-        }
-    }
-}
-
-@Composable
-fun ProductCard(product: ProductItem, modifier: Modifier = Modifier) {
-    Card(
-        modifier = modifier
-            .aspectRatio(0.7f)
-            .border(1.dp, Color(0xFFEEEEEE), RoundedCornerShape(8.dp)),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        shape = RoundedCornerShape(8.dp)
-    ) {
-        Column(
-            modifier = Modifier.fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
-                    .padding(8.dp)
-                    .background(Color(0xFFF9F9F9)),
-                contentAlignment = Alignment.Center
-            ) {
-                Text("IMAGE", color = Color.LightGray)
-            }
-            
-            Column(
-                modifier = Modifier.padding(8.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    product.name,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold,
-                    textAlign = TextAlign.Center,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Surface(
-                    color = product.buttonColor,
-                    shape = RoundedCornerShape(4.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(
-                        product.promoText,
-                        color = Color.White,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(vertical = 6.dp)
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun DailyMarketSection(
-    onCategoryClick: () -> Unit,
-    onRecipeClick: (Recipe) -> Unit,
-    onProductClick: (FreshProduct) -> Unit
-) {
+fun IngredientSelectionBottomSheet(recipeName: String, onDismiss: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Color(0xFFE8F5E9))
-            .padding(vertical = 16.dp)
+            .padding(16.dp)
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 16.dp),
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                buildAnnotatedString {
-                    withStyle(style = SpanStyle(color = Color(0xFF2E7D32), fontWeight = FontWeight.Bold)) {
-                        append("ĐI CHỢ MỖI NGÀY ")
-                    }
-                    withStyle(style = SpanStyle(color = Color(0xFF2E7D32), fontSize = 12.sp)) {
-                        append("(Mua hàng tươi sống 150k, freeship 3km)")
-                    }
-                }
-            )
-        }
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        val tabs = listOf(
-            MarketTab("Món mặn", true),
-            MarketTab("Xào, luộc", false, "-46%"),
-            MarketTab("Món canh", false),
-            MarketTab("Rau sống", false),
-            MarketTab("Trái cây", false, "-32%")
-        )
-        LazyRow(
-            contentPadding = PaddingValues(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            items(tabs) { tab ->
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(if (tab.isSelected) Color(0xFF2E7D32) else Color.White)
-                        .border(1.dp, if (tab.isSelected) Color(0xFF2E7D32) else Color(0xFFE0E0E0), RoundedCornerShape(8.dp))
-                        .padding(horizontal = 12.dp, vertical = 8.dp)
-                        .clickable { onCategoryClick() }
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            tab.name,
-                            color = if (tab.isSelected) Color.White else Color(0xFF2E7D32),
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
-                    if (tab.badge != null) {
-                        Text(
-                            tab.badge,
-                            modifier = Modifier
-                                .align(Alignment.TopEnd)
-                                .background(Color.Red, RoundedCornerShape(4.dp))
-                                .padding(horizontal = 2.dp),
-                            color = Color.White,
-                            fontSize = 8.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
+            Text(text = "Nguyên liệu nấu món", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+            IconButton(onClick = onDismiss) {
+                Icon(Icons.Default.Close, contentDescription = "Close")
             }
         }
-
+        
+        Text(text = recipeName, color = Color(0xFF008848), fontWeight = FontWeight.Medium)
+        
         Spacer(modifier = Modifier.height(16.dp))
-
-        val recipes = listOf(
-            Recipe("Thịt kho trứng"),
-            Recipe("Gà luộc"),
-            Recipe("Cơm rang dưa")
-        )
-        LazyRow(
-            contentPadding = PaddingValues(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            items(recipes) { recipe ->
-                RecipeCard(recipe, onClick = { onRecipeClick(recipe) })
-            }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        val freshProducts = listOf(
-            FreshProduct("Trứng gà tươi hộp 10 quả", "27.000đ"),
-            FreshProduct("Ba rọi heo 300g", "44.145đ", "54.500đ", "-19%", "CP"),
-            FreshProduct("Ba rọi heo Nhập khẩu Nga 300g", "37.720đ", "46.000đ", null, null, "Nhập Khẩu Nga")
-        )
-        LazyRow(
-            contentPadding = PaddingValues(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            items(freshProducts) { product ->
-                FreshProductCard(product, onClick = { onProductClick(product) })
-            }
-        }
-    }
-}
-
-@Composable
-fun RecipeCard(recipe: Recipe, onClick: () -> Unit) {
-    Card(
-        modifier = Modifier.width(140.dp).clickable { onClick() },
-        shape = RoundedCornerShape(8.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
-    ) {
-        Column {
-            Box(
+        
+        // Ingredients list (mock)
+        repeat(3) { i ->
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(140.dp)
-                    .background(Color.LightGray),
-                contentAlignment = Alignment.BottomStart
+                    .padding(vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    recipe.name,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(Color.Black.copy(alpha = 0.3f))
-                        .padding(8.dp),
-                    color = Color.White,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold
-                )
+                Box(modifier = Modifier.size(40.dp).background(Color(0xFFF5F5F5), RoundedCornerShape(4.dp)))
+                Spacer(modifier = Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(text = "Nguyên liệu ${i + 1}", fontSize = 14.sp)
+                    Text(text = "20.000đ", fontSize = 12.sp, color = Color.Red, fontWeight = FontWeight.Bold)
+                }
+                Checkbox(checked = true, onCheckedChange = {}, colors = CheckboxDefaults.colors(checkedColor = Color(0xFF008848)))
             }
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(8.dp)
-                    .clickable { onClick() },
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    "MUA NGUYÊN LIỆU",
-                    color = Color(0xFF008848),
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            }
+            HorizontalDivider(color = Color(0xFFEEEEEE))
         }
+        
+        Spacer(modifier = Modifier.height(24.dp))
+        
+        Button(
+            onClick = onDismiss,
+            modifier = Modifier.fillMaxWidth().height(48.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF008848))
+        ) {
+            Text("MUA TẤT CẢ NGUYÊN LIỆU", fontWeight = FontWeight.Bold)
+        }
+        
+        Spacer(modifier = Modifier.height(16.dp))
     }
 }
 
-@Composable
-fun FreshProductCard(product: FreshProduct, onClick: () -> Unit) {
-    Card(
-        modifier = Modifier.width(140.dp).clickable { onClick() },
-        shape = RoundedCornerShape(8.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
-    ) {
-        Column(modifier = Modifier.padding(8.dp)) {
-            Box(modifier = Modifier.fillMaxWidth()) {
-                if (product.topBadge != null) {
-                    Text(
-                        product.topBadge,
-                        modifier = Modifier.align(Alignment.TopEnd),
-                        color = Color.Red,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-                if (product.brandBadge != null) {
-                    Box(
-                        modifier = Modifier
-                            .size(24.dp)
-                            .clip(CircleShape)
-                            .background(Color.Red)
-                            .align(Alignment.TopStart),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(product.brandBadge, color = Color.White, fontSize = 8.sp, fontWeight = FontWeight.Bold)
-                    }
-                }
-                
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(100.dp)
-                        .padding(top = 16.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("IMAGE", color = Color.LightGray, fontSize = 10.sp)
-                }
-
-                if (product.discountBadge != null) {
-                    Text(
-                        product.discountBadge,
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .background(Color.Red, RoundedCornerShape(2.dp))
-                            .padding(horizontal = 2.dp),
-                        color = Color.White,
-                        fontSize = 9.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                product.name,
-                fontSize = 12.sp,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.height(32.dp),
-                lineHeight = 16.sp
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                product.price,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.Black
-            )
-            if (product.oldPrice != null) {
-                Text(
-                    product.oldPrice,
-                    fontSize = 11.sp,
-                    color = Color.Gray,
-                    textDecoration = TextDecoration.LineThrough
-                )
-            }
-        }
-    }
-}
+data class ProductItem(
+    val name: String,
+    val originalPrice: Int,
+    val price: Int,
+    val discount: String
+)

@@ -2,6 +2,8 @@ package com.vunh.jetpack.bhx.di
 
 import com.vunh.jetpack.bhx.data.local.NotificationLocalDataSource
 import com.vunh.jetpack.bhx.data.local.PostLocalDataSource
+import com.vunh.jetpack.bhx.data.remote.DummyJsonApiService
+import com.vunh.jetpack.bhx.data.remote.EscuelaApiService
 import com.vunh.jetpack.bhx.data.remote.PostRemoteDataSource
 import com.vunh.jetpack.bhx.data.repository.HomeRepositoryImpl
 import com.vunh.jetpack.bhx.data.repository.NotificationRepositoryImpl
@@ -21,9 +23,16 @@ object RepositoryModule {
     @Singleton
     fun provideHomeRepository(
         remoteDataSource: PostRemoteDataSource,
-        localDataSource: PostLocalDataSource
+        localDataSource: PostLocalDataSource,
+        escuelaApiService: EscuelaApiService,
+        dummyJsonApiService: DummyJsonApiService
     ): HomeRepository {
-        return HomeRepositoryImpl(remoteDataSource, localDataSource)
+        return HomeRepositoryImpl(
+            remoteDataSource,
+            localDataSource,
+            escuelaApiService,
+            dummyJsonApiService
+        )
     }
 
     @Provides
