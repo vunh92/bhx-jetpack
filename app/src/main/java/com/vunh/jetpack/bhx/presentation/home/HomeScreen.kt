@@ -17,6 +17,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -120,49 +121,72 @@ fun HomeScreen(
                 CircularProgressIndicator(color = Color(0xFF008848))
             }
         } else {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
+            PullToRefreshBox(
+                isRefreshing = isLoading,
+                onRefresh = viewModel::refreshAll,
+                modifier = Modifier.fillMaxSize()
             ) {
-                MainBannerSection(onClick = onActionClick)
-                
-                DummyCategoriesSection(categories = dummyCategories)
-
-                CategorySection(onClick = onActionClick)
-                EssentialProductsSection(onClick = { product ->
-                    if (isLoggedIn) {
-                        selectedProductForSheet = product
-                        showProductSheet = true
-                    } else {
-                        showLoginDialog = true
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
+                ) {
+                    if (errorMessage != null &&
+                        posts.isEmpty() &&
+                        products.isEmpty() &&
+                        dummyCategories.isEmpty()
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp)
+                        ) {
+                            ApiProductStatusCard(
+                                message = errorMessage.orEmpty(),
+                                actionLabel = stringResource(R.string.home_retry),
+                                onActionClick = viewModel::refreshAll
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                        }
                     }
-                })
-                DailyMarketSection(
-                    onCategoryClick = onActionClick,
-                    onRecipeClick = { _ -> onActionClick() },
-                    onProductClick = { product ->
+
+                    MainBannerSection(onClick = onActionClick)
+
+                    DummyCategoriesSection(categories = dummyCategories)
+
+                    CategorySection(onClick = onActionClick)
+                    EssentialProductsSection(onClick = { product ->
                         if (isLoggedIn) {
-                            selectedRecipeForSheet = Recipe(product.name)
-                            showIngredientSheet = true
+                            selectedProductForSheet = product
+                            showProductSheet = true
                         } else {
                             showLoginDialog = true
                         }
-                    }
-                )
-                
-                EscuelaProductGridSection(
-                    products = products,
-                    errorMessage = errorMessage,
-                    onRetry = viewModel::fetchProducts
-                )
+                    })
+                    DailyMarketSection(
+                        onCategoryClick = onActionClick,
+                        onRecipeClick = { _ -> onActionClick() },
+                        onProductClick = { product ->
+                            if (isLoggedIn) {
+                                selectedRecipeForSheet = Recipe(product.name)
+                                showIngredientSheet = true
+                            } else {
+                                showLoginDialog = true
+                            }
+                        }
+                    )
 
-                HomeApiProductsSection(
-                    posts = posts,
-                    errorMessage = errorMessage,
-                    onRetry = viewModel::refreshPosts
-                )
-                Spacer(modifier = Modifier.height(16.dp))
+                    EscuelaProductGridSection(
+                        products = products,
+                        errorMessage = errorMessage,
+                        onRetry = viewModel::fetchProducts
+                    )
+
+                    HomeApiProductsSection(
+                        posts = posts,
+                        errorMessage = errorMessage,
+                        onRetry = viewModel::refreshPosts
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
             }
         }
     }

@@ -7,16 +7,22 @@ import com.vunh.jetpack.bhx.domain.model.Post
 import com.vunh.jetpack.bhx.domain.model.Product
 import com.vunh.jetpack.bhx.domain.usecase.GetDummyCategoriesUseCase
 import com.vunh.jetpack.bhx.domain.usecase.GetEscuelaProductsUseCase
+import com.vunh.jetpack.bhx.domain.usecase.ObservePostsUseCase
 import com.vunh.jetpack.bhx.domain.usecase.SyncPostsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.supervisorScope
+import java.net.UnknownHostException
 import javax.inject.Inject
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
+    private val observePostsUseCase: ObservePostsUseCase,
     private val syncPostsUseCase: SyncPostsUseCase,
     private val getEscuelaProductsUseCase: GetEscuelaProductsUseCase,
     private val getDummyCategoriesUseCase: GetDummyCategoriesUseCase
@@ -38,9 +44,49 @@ class HomeViewModel @Inject constructor(
     val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
 
     init {
-        refreshPosts()
-        fetchProducts()
-        fetchDummyCategories()
+        viewModelScope.launch {
+            observePostsUseCase().collect { posts ->
+                _posts.value = posts
+            }
+        }
+        refreshAll()
+    }
+
+    fun refreshAll() {
+        viewModelScope.launch {
+            _isLoading.value = true
+            _errorMessage.value = null
+            try {
+                supervisorScope {
+                    val jobs = listOf(
+                        async {
+                            runCatching {
+                                syncPostsUseCase()
+                            }.onFailure(::handleRefreshError)
+                        },
+                        async {
+                            runCatching {
+                                getEscuelaProductsUseCase(limit = 10, offset = 0)
+                            }.onSuccess { escuelaProducts ->
+                                _products.value = escuelaProducts
+                            }.onFailure(::handleRefreshError)
+                        },
+                        async {
+                            runCatching {
+                                getDummyCategoriesUseCase()
+                            }.onSuccess { dummyCats ->
+                                _dummyCategories.value = dummyCats
+                            }.onFailure(::handleRefreshError)
+                        }
+                    )
+                    jobs.awaitAll()
+                }
+            } catch (e: Exception) {
+                handleRefreshError(e)
+            } finally {
+                _isLoading.value = false
+            }
+        }
     }
 
     fun refreshPosts() {
@@ -50,7 +96,7 @@ class HomeViewModel @Inject constructor(
             try {
                 syncPostsUseCase()
             } catch (e: Exception) {
-                _errorMessage.value = e.message ?: "Unable to load posts"
+                handleRefreshError(e)
             } finally {
                 _isLoading.value = false
             }
@@ -65,7 +111,7 @@ class HomeViewModel @Inject constructor(
                 val result = getEscuelaProductsUseCase(limit = 10, offset = 0)
                 _products.value = result
             } catch (e: Exception) {
-                _errorMessage.value = e.message ?: "Unable to load products"
+                handleRefreshError(e)
             } finally {
                 _isLoading.value = false
             }
@@ -80,10 +126,17 @@ class HomeViewModel @Inject constructor(
                 val result = getDummyCategoriesUseCase()
                 _dummyCategories.value = result
             } catch (e: Exception) {
-                _errorMessage.value = e.message ?: "Unable to load dummy categories"
+                handleRefreshError(e)
             } finally {
                 _isLoading.value = false
             }
+        }
+    }
+
+    private fun handleRefreshError(throwable: Throwable) {
+        _errorMessage.value = when (throwable) {
+            is UnknownHostException -> "Không có kết nối mạng. Vui lòng kiểm tra Internet và thử lại."
+            else -> throwable.message ?: "Unable to load data"
         }
     }
 }
