@@ -75,17 +75,20 @@ fun BhxApp() {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
     val showBottomBar = AppDestinations.entries.any { it.route == currentRoute }
+    val navigateToTopLevel: (String) -> Unit = { route ->
+        navController.navigate(route) {
+            popUpTo(navController.graph.startDestinationId) { saveState = true }
+            launchSingleTop = true
+            restoreState = true
+        }
+    }
 
     if (isMenuOpen) {
         CategoryScreen(
             onClose = { isMenuOpen = false },
             onHomeClick = { 
                 isMenuOpen = false
-                navController.navigate(AppDestinations.HOME.route) {
-                    popUpTo(navController.graph.startDestinationId) { saveState = true }
-                    launchSingleTop = true
-                    restoreState = true
-                }
+                navigateToTopLevel(AppDestinations.HOME.route)
             }
         )
     } else if (showBottomBar) {
@@ -123,20 +126,28 @@ fun BhxApp() {
                         },
                         selected = currentRoute == destination.route,
                         onClick = { 
-                            navController.navigate(destination.route) {
-                                popUpTo(navController.graph.startDestinationId) { saveState = true }
-                                launchSingleTop = true
-                                restoreState = true
-                            }
+                            navigateToTopLevel(destination.route)
                         }
                     )
                 }
             }
         ) {
-            BhxNavHost(navController, isLoggedIn = userProfile != null, onMenuClick = { isMenuOpen = true }, onLoginSuccess = { loginTrigger++ })
+            BhxNavHost(
+                navController = navController,
+                isLoggedIn = userProfile != null,
+                onMenuClick = { isMenuOpen = true },
+                onLoginSuccess = { loginTrigger++ },
+                onNavigateToProfile = { navigateToTopLevel(AppDestinations.PROFILE.route) }
+            )
         }
     } else {
-        BhxNavHost(navController, isLoggedIn = userProfile != null, onMenuClick = { isMenuOpen = true }, onLoginSuccess = { loginTrigger++ })
+        BhxNavHost(
+            navController = navController,
+            isLoggedIn = userProfile != null,
+            onMenuClick = { isMenuOpen = true },
+            onLoginSuccess = { loginTrigger++ },
+            onNavigateToProfile = { navigateToTopLevel(AppDestinations.PROFILE.route) }
+        )
     }
 }
 
@@ -145,7 +156,8 @@ fun BhxNavHost(
     navController: androidx.navigation.NavHostController,
     isLoggedIn: Boolean,
     onMenuClick: () -> Unit,
-    onLoginSuccess: () -> Unit
+    onLoginSuccess: () -> Unit,
+    onNavigateToProfile: () -> Unit
 ) {
     NavHost(
         navController = navController,
@@ -155,20 +167,20 @@ fun BhxNavHost(
         composable(AppDestinations.HOME.route) {
             HomeScreen(
                 onMenuClick = onMenuClick,
-                onNavigateToProfile = { navController.navigate(AppDestinations.PROFILE.route) },
+                onNavigateToProfile = onNavigateToProfile,
                 isLoggedIn = isLoggedIn
             )
         }
         composable(AppDestinations.HISTORY.route) {
             OrderHistoryScreen(
                 onMenuClick = onMenuClick,
-                onNavigateToLogin = { navController.navigate(AppDestinations.PROFILE.route) }
+                onNavigateToLogin = onNavigateToProfile
             )
         }
         composable(AppDestinations.CART.route) {
             CartScreen(
                 onMenuClick = onMenuClick,
-                onNavigateToLogin = { navController.navigate(AppDestinations.PROFILE.route) }
+                onNavigateToLogin = onNavigateToProfile
             )
         }
         composable(AppDestinations.PROFILE.route) {
