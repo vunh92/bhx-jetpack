@@ -42,11 +42,17 @@ class HomeViewModel @Inject constructor(
     private val _productSectionTitle = MutableStateFlow("SẢN PHẨM MỚI (ESCUELA API)")
     val productSectionTitle: StateFlow<String> = _productSectionTitle.asStateFlow()
 
+    private val _selectedCategorySlug = MutableStateFlow("all")
+    val selectedCategorySlug: StateFlow<String> = _selectedCategorySlug.asStateFlow()
+
     private val _dummyCategories = MutableStateFlow<List<Category>>(emptyList())
     val dummyCategories: StateFlow<List<Category>> = _dummyCategories.asStateFlow()
 
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
+
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
 
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
@@ -57,12 +63,17 @@ class HomeViewModel @Inject constructor(
                 _posts.value = posts
             }
         }
-        refreshAll()
+        refreshAll(showRefreshIndicator = false)
     }
 
     fun refreshAll() {
+        refreshAll(showRefreshIndicator = true)
+    }
+
+    private fun refreshAll(showRefreshIndicator: Boolean) {
         viewModelScope.launch {
             _isLoading.value = true
+            _isRefreshing.value = showRefreshIndicator
             _errorMessage.value = null
             try {
                 supervisorScope {
@@ -86,6 +97,19 @@ class HomeViewModel @Inject constructor(
                             }.onSuccess { dummyCats ->
                                 _dummyCategories.value = dummyCats
                             }.onFailure(::handleRefreshError)
+                        },
+                        async {
+                            runCatching {
+                                getDummyProductsByCategoryUseCase(
+                                    name = "all",
+                                    limit = 10,
+                                    offset = 0
+                                )
+                            }.onSuccess { allProducts ->
+                                _productByCategories.value = allProducts
+                                _selectedCategorySlug.value = "all"
+                                _productSectionTitle.value = "DUMMYJSON PRODUCTS: ALL"
+                            }.onFailure(::handleRefreshError)
                         }
                     )
                     jobs.awaitAll()
@@ -94,6 +118,7 @@ class HomeViewModel @Inject constructor(
                 handleRefreshError(e)
             } finally {
                 _isLoading.value = false
+                _isRefreshing.value = false
             }
         }
     }
@@ -133,14 +158,18 @@ class HomeViewModel @Inject constructor(
             _isLoading.value = true
             _errorMessage.value = null
             try {
+                _selectedCategorySlug.value = category.slug
                 val result = getDummyProductsByCategoryUseCase(
                     name = category.slug,
                     limit = 10,
                     offset = 0
                 )
                 _productByCategories.value = result
-                _productSectionTitle.value =
+                _productSectionTitle.value = if (category.slug == "all") {
+                    "DUMMYJSON PRODUCTS: ALL"
+                } else {
                     "DUMMYJSON PRODUCTS: ${category.name.replaceFirstChar { it.uppercase() }}"
+                }
             } catch (e: Exception) {
                 handleRefreshError(e)
             } finally {

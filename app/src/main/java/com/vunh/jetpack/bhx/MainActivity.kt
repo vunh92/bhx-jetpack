@@ -68,9 +68,9 @@ fun BhxApp() {
     
     var isMenuOpen by rememberSaveable { mutableStateOf(false) }
     
-    // Track login state to update UI
-    var loginTrigger by remember { mutableIntStateOf(0) }
-    val userProfile = remember(loginTrigger) { profileManager.getProfile() }
+    // Track profile changes to update tab label and badge.
+    var profileTrigger by remember { mutableIntStateOf(0) }
+    val userProfile = remember(profileTrigger) { profileManager.getProfile() }
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
@@ -136,7 +136,8 @@ fun BhxApp() {
                 navController = navController,
                 isLoggedIn = userProfile != null,
                 onMenuClick = { isMenuOpen = true },
-                onLoginSuccess = { loginTrigger++ },
+                onLoginSuccess = { profileTrigger++ },
+                onLogoutSuccess = { profileTrigger++ },
                 onNavigateToProfile = { navigateToTopLevel(AppDestinations.PROFILE.route) }
             )
         }
@@ -145,7 +146,8 @@ fun BhxApp() {
             navController = navController,
             isLoggedIn = userProfile != null,
             onMenuClick = { isMenuOpen = true },
-            onLoginSuccess = { loginTrigger++ },
+            onLoginSuccess = { profileTrigger++ },
+            onLogoutSuccess = { profileTrigger++ },
             onNavigateToProfile = { navigateToTopLevel(AppDestinations.PROFILE.route) }
         )
     }
@@ -157,6 +159,7 @@ fun BhxNavHost(
     isLoggedIn: Boolean,
     onMenuClick: () -> Unit,
     onLoginSuccess: () -> Unit,
+    onLogoutSuccess: () -> Unit,
     onNavigateToProfile: () -> Unit
 ) {
     NavHost(
@@ -187,6 +190,7 @@ fun BhxNavHost(
             ProfileScreen(
                 onMenuClick = onMenuClick,
                 onLoginSuccess = onLoginSuccess,
+                onLogoutSuccess = onLogoutSuccess,
                 onNotificationClick = { navController.navigate("notifications") },
                 onScannerClick = { navController.navigate("scanner") },
                 onWalletClick = { balance -> navController.navigate("wallet/$balance") },

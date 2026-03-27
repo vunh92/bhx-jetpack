@@ -39,6 +39,7 @@ import java.util.Locale
 fun ProfileScreen(
     onMenuClick: () -> Unit,
     onLoginSuccess: () -> Unit = {},
+    onLogoutSuccess: () -> Unit = {},
     onNotificationClick: () -> Unit = {},
     onScannerClick: () -> Unit = {},
     onWalletClick: (String) -> Unit = {},
@@ -74,6 +75,7 @@ fun ProfileScreen(
                     profile = userProfile!!,
                     onLogout = {
                         viewModel.logout()
+                        onLogoutSuccess()
                     },
                     onNotificationClick = onNotificationClick,
                     onScannerClick = onScannerClick,

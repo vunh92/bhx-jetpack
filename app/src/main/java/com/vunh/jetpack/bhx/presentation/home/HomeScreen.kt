@@ -52,7 +52,9 @@ fun HomeScreen(
     val productByCategories by viewModel.productByCategories.collectAsState()
     val dummyCategories by viewModel.dummyCategories.collectAsState()
     val productSectionTitle by viewModel.productSectionTitle.collectAsState()
+    val selectedCategorySlug by viewModel.selectedCategorySlug.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
+    val isRefreshing by viewModel.isRefreshing.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
 
     var showLoginDialog by remember { mutableStateOf(false) }
@@ -124,7 +126,7 @@ fun HomeScreen(
             }
         } else {
             PullToRefreshBox(
-                isRefreshing = isLoading,
+                isRefreshing = isRefreshing,
                 onRefresh = viewModel::refreshAll,
                 modifier = Modifier.fillMaxSize()
             ) {
@@ -150,10 +152,14 @@ fun HomeScreen(
                         }
                     }
 
-                    MainBannerSection(onClick = onActionClick)
+                    MainBannerSection(
+                        products = products,
+                        onClick = onActionClick
+                    )
 
                     DummyCategoriesSection(
                         categories = dummyCategories,
+                        selectedCategorySlug = selectedCategorySlug,
                         onCategoryClick = viewModel::fetchDummyProductsByCategory
                     )
 
@@ -164,8 +170,8 @@ fun HomeScreen(
                         onRetry = viewModel::refreshAll
                     )
 
-                    CategorySection(onClick = onActionClick)
-                    EssentialProductsSection(onClick = { product ->
+                    DemoCategorySection(onClick = onActionClick)
+                    DemoProductsSection(onClick = { product ->
                         if (isLoggedIn) {
                             selectedProductForSheet = product
                             showProductSheet = true
@@ -186,13 +192,6 @@ fun HomeScreen(
                         }
                     )
 
-                    EscuelaProductGridSection(
-                        title = "SẢN PHẨM MỚI (ESCUELA API)",
-                        products = products,
-                        errorMessage = errorMessage,
-                        onRetry = viewModel::fetchProducts
-                    )
-
                     HomeApiProductsSection(
                         posts = posts,
                         errorMessage = errorMessage,
@@ -208,10 +207,21 @@ fun HomeScreen(
 @Composable
 private fun DummyCategoriesSection(
     categories: List<Category>,
+    selectedCategorySlug: String,
     onCategoryClick: (Category) -> Unit,
     modifier: Modifier = Modifier
 ) {
     if (categories.isEmpty()) return
+
+    val displayCategories = remember(categories) {
+        listOf(
+            Category(
+                name = "All",
+                slug = "all",
+                url = ""
+            )
+        ) + categories
+    }
 
     Column(
         modifier = modifier.padding(vertical = 16.dp)
@@ -228,18 +238,22 @@ private fun DummyCategoriesSection(
             contentPadding = PaddingValues(horizontal = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            items(categories) { category ->
+            items(displayCategories) { category ->
+                val isSelected = category.slug == selectedCategorySlug
                 Surface(
-                    color = Color.White,
+                    color = if (isSelected) Color(0xFF008848) else Color.White,
                     shape = RoundedCornerShape(20.dp),
-                    border = BorderStroke(1.dp, Color(0xFFBBDEFB)),
+                    border = BorderStroke(
+                        1.dp,
+                        if (isSelected) Color(0xFF008848) else Color(0xFFBBDEFB)
+                    ),
                     modifier = Modifier.clickable { onCategoryClick(category) }
                 ) {
                     Text(
                         text = category.name.replaceFirstChar { it.uppercase() },
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                         fontSize = 13.sp,
-                        color = Color(0xFF0D47A1)
+                        color = if (isSelected) Color.White else Color(0xFF0D47A1)
                     )
                 }
             }
@@ -476,19 +490,24 @@ private fun ApiProductStatusCard(
 }
 
 @Composable
-private fun MainBannerSection(onClick: () -> Unit) {
-    val banners = listOf(
+private fun MainBannerSection(
+    products: List<Product>,
+    onClick: () -> Unit
+) {
+    val bannerProducts = remember(products) { products.take(5) }
+    val fallbackBanners = listOf(
         Color(0xFFFFD180),
         Color(0xFF80D8FF),
         Color(0xFFA7FFEB)
     )
-    val pagerState = rememberPagerState(pageCount = { banners.size })
+    val pageCount = if (bannerProducts.isNotEmpty()) bannerProducts.size else fallbackBanners.size
+    val pagerState = rememberPagerState(pageCount = { pageCount })
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(pageCount) {
         while (true) {
             yield()
             delay(3000)
-            pagerState.animateScrollToPage((pagerState.currentPage + 1) % banners.size)
+            pagerState.animateScrollToPage((pagerState.currentPage + 1) % pageCount)
         }
     }
 
@@ -504,18 +523,66 @@ private fun MainBannerSection(onClick: () -> Unit) {
             state = pagerState,
             modifier = Modifier.fillMaxSize()
         ) { page ->
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(banners[page]),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "KHUYẾN MÃI HẤP DẪN ${page + 1}",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 20.sp,
-                    color = Color.White
-                )
+            if (bannerProducts.isNotEmpty()) {
+                val product = bannerProducts[page]
+
+                Box(modifier = Modifier.fillMaxSize()) {
+                    AsyncImage(
+                        model = product.images.firstOrNull(),
+                        contentDescription = product.title,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color.Black.copy(alpha = 0.28f))
+                    )
+
+                    Column(
+                        modifier = Modifier
+                            .align(Alignment.BottomStart)
+                            .padding(16.dp)
+                    ) {
+                        Text(
+                            text = product.categoryName.uppercase(),
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFFFFF59D)
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = product.title,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 18.sp,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                            color = Color.White
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = "${product.price}$",
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 16.sp,
+                            color = Color.White
+                        )
+                    }
+                }
+            } else {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(fallbackBanners[page]),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "KHUYẾN MÃI HẤP DẪN ${page + 1}",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 20.sp,
+                        color = Color.White
+                    )
+                }
             }
         }
 
@@ -525,7 +592,7 @@ private fun MainBannerSection(onClick: () -> Unit) {
                 .padding(bottom = 8.dp),
             horizontalArrangement = Arrangement.Center
         ) {
-            repeat(banners.size) { iteration ->
+            repeat(pageCount) { iteration ->
                 val color = if (pagerState.currentPage == iteration) Color.White else Color.White.copy(alpha = 0.5f)
                 Box(
                     modifier = Modifier
@@ -540,7 +607,7 @@ private fun MainBannerSection(onClick: () -> Unit) {
 }
 
 @Composable
-private fun CategorySection(onClick: () -> Unit) {
+private fun DemoCategorySection(onClick: () -> Unit) {
     val categories = listOf(
         "Thịt, cá, trứng", "Rau, củ, trái cây", "Gạo, mì, gia vị", "Sữa, đồ uống",
         "Bánh kẹo, ăn vặt", "Vệ sinh nhà cửa", "Chăm sóc cá nhân", "Đồ dùng gia đình"
@@ -603,7 +670,7 @@ private fun CategoryItem(name: String, onClick: () -> Unit) {
 }
 
 @Composable
-private fun EssentialProductsSection(onClick: (ProductItem) -> Unit) {
+private fun DemoProductsSection(onClick: (ProductItem) -> Unit) {
     val products = listOf(
         ProductItem("Nước mắm Nam Ngư 750ml", 45000, 39000, "15%"),
         ProductItem("Dầu ăn Tường An 1L", 52000, 48000, "8%"),

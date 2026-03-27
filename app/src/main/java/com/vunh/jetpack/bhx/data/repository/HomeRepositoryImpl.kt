@@ -44,6 +44,13 @@ class HomeRepositoryImpl @Inject constructor(
         limit: Int,
         offset: Int
     ): List<Product> {
+        if (name == "all") {
+            return dummyJsonApiService.getProducts(
+                limit = limit,
+                skip = offset
+            ).products.map { it.toDomain() }
+        }
+
         return dummyJsonApiService.getProductsByCategory(
             name = name,
             limit = limit,
