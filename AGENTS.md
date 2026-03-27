@@ -95,10 +95,10 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
 // 4. Project imports (grouped by package depth)
-// - domain.models
-// - domain.repository
-// - domain.usecase
-// - presentation.screens
+ - domain.models
+ - domain.repository
+ - domain.usecase
+ - presentation.screens
 // - presentation.common
 import com.vunh.jetpack.bhx.domain.model.*
 import com.vunh.jetpack.bhx.presentation.home.*

@@ -11,4 +11,5 @@ interface HomeRepository {
     
     suspend fun getEscuelaProducts(limit: Int, offset: Int): List<Product>
     suspend fun getDummyCategories(): List<Category>
+    suspend fun getDummyProductsByCategory(name: String, limit: Int, offset: Int): List<Product>
 }

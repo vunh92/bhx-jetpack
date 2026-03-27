@@ -38,4 +38,16 @@ class HomeRepositoryImpl @Inject constructor(
     override suspend fun getDummyCategories(): List<Category> {
         return dummyJsonApiService.getCategories().map { it.toDomain() }
     }
+
+    override suspend fun getDummyProductsByCategory(
+        name: String,
+        limit: Int,
+        offset: Int
+    ): List<Product> {
+        return dummyJsonApiService.getProductsByCategory(
+            name = name,
+            limit = limit,
+            skip = offset
+        ).products.map { it.toDomain() }
+    }
 }

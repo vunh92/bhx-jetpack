@@ -49,7 +49,9 @@ fun HomeScreen(
 ) {
     val posts by viewModel.posts.collectAsState()
     val products by viewModel.products.collectAsState()
+    val productByCategories by viewModel.productByCategories.collectAsState()
     val dummyCategories by viewModel.dummyCategories.collectAsState()
+    val productSectionTitle by viewModel.productSectionTitle.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
 
@@ -150,7 +152,17 @@ fun HomeScreen(
 
                     MainBannerSection(onClick = onActionClick)
 
-                    DummyCategoriesSection(categories = dummyCategories)
+                    DummyCategoriesSection(
+                        categories = dummyCategories,
+                        onCategoryClick = viewModel::fetchDummyProductsByCategory
+                    )
+
+                    EscuelaProductGridSection(
+                        title = productSectionTitle,
+                        products = productByCategories,
+                        errorMessage = errorMessage,
+                        onRetry = viewModel::refreshAll
+                    )
 
                     CategorySection(onClick = onActionClick)
                     EssentialProductsSection(onClick = { product ->
@@ -175,6 +187,7 @@ fun HomeScreen(
                     )
 
                     EscuelaProductGridSection(
+                        title = "SẢN PHẨM MỚI (ESCUELA API)",
                         products = products,
                         errorMessage = errorMessage,
                         onRetry = viewModel::fetchProducts
@@ -195,6 +208,7 @@ fun HomeScreen(
 @Composable
 private fun DummyCategoriesSection(
     categories: List<Category>,
+    onCategoryClick: (Category) -> Unit,
     modifier: Modifier = Modifier
 ) {
     if (categories.isEmpty()) return
@@ -219,7 +233,7 @@ private fun DummyCategoriesSection(
                     color = Color.White,
                     shape = RoundedCornerShape(20.dp),
                     border = BorderStroke(1.dp, Color(0xFFBBDEFB)),
-                    modifier = Modifier.clickable { }
+                    modifier = Modifier.clickable { onCategoryClick(category) }
                 ) {
                     Text(
                         text = category.name.replaceFirstChar { it.uppercase() },
@@ -235,6 +249,7 @@ private fun DummyCategoriesSection(
 
 @Composable
 private fun EscuelaProductGridSection(
+    title: String,
     products: List<Product>,
     errorMessage: String?,
     onRetry: () -> Unit,
@@ -244,7 +259,7 @@ private fun EscuelaProductGridSection(
         modifier = modifier.padding(16.dp)
     ) {
         Text(
-            text = "SẢN PHẨM MỚI (ESCUELA API)",
+            text = title,
             fontWeight = FontWeight.Bold,
             fontSize = 18.sp,
             color = Color(0xFF008848)

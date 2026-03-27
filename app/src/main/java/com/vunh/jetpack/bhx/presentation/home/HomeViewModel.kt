@@ -6,6 +6,7 @@ import com.vunh.jetpack.bhx.domain.model.Category
 import com.vunh.jetpack.bhx.domain.model.Post
 import com.vunh.jetpack.bhx.domain.model.Product
 import com.vunh.jetpack.bhx.domain.usecase.GetDummyCategoriesUseCase
+import com.vunh.jetpack.bhx.domain.usecase.GetDummyProductsByCategoryUseCase
 import com.vunh.jetpack.bhx.domain.usecase.GetEscuelaProductsUseCase
 import com.vunh.jetpack.bhx.domain.usecase.ObservePostsUseCase
 import com.vunh.jetpack.bhx.domain.usecase.SyncPostsUseCase
@@ -25,7 +26,8 @@ class HomeViewModel @Inject constructor(
     private val observePostsUseCase: ObservePostsUseCase,
     private val syncPostsUseCase: SyncPostsUseCase,
     private val getEscuelaProductsUseCase: GetEscuelaProductsUseCase,
-    private val getDummyCategoriesUseCase: GetDummyCategoriesUseCase
+    private val getDummyCategoriesUseCase: GetDummyCategoriesUseCase,
+    private val getDummyProductsByCategoryUseCase: GetDummyProductsByCategoryUseCase
 ) : ViewModel() {
 
     private val _posts = MutableStateFlow<List<Post>>(emptyList())
@@ -33,6 +35,12 @@ class HomeViewModel @Inject constructor(
 
     private val _products = MutableStateFlow<List<Product>>(emptyList())
     val products: StateFlow<List<Product>> = _products.asStateFlow()
+
+    private val _productByCategories = MutableStateFlow<List<Product>>(emptyList())
+    val productByCategories: StateFlow<List<Product>> = _productByCategories.asStateFlow()
+
+    private val _productSectionTitle = MutableStateFlow("SẢN PHẨM MỚI (ESCUELA API)")
+    val productSectionTitle: StateFlow<String> = _productSectionTitle.asStateFlow()
 
     private val _dummyCategories = MutableStateFlow<List<Category>>(emptyList())
     val dummyCategories: StateFlow<List<Category>> = _dummyCategories.asStateFlow()
@@ -69,6 +77,7 @@ class HomeViewModel @Inject constructor(
                                 getEscuelaProductsUseCase(limit = 10, offset = 0)
                             }.onSuccess { escuelaProducts ->
                                 _products.value = escuelaProducts
+                                _productSectionTitle.value = "SẢN PHẨM MỚI (ESCUELA API)"
                             }.onFailure(::handleRefreshError)
                         },
                         async {
@@ -110,6 +119,28 @@ class HomeViewModel @Inject constructor(
             try {
                 val result = getEscuelaProductsUseCase(limit = 10, offset = 0)
                 _products.value = result
+                _productSectionTitle.value = "SẢN PHẨM MỚI (ESCUELA API)"
+            } catch (e: Exception) {
+                handleRefreshError(e)
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
+    fun fetchDummyProductsByCategory(category: Category) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            _errorMessage.value = null
+            try {
+                val result = getDummyProductsByCategoryUseCase(
+                    name = category.slug,
+                    limit = 10,
+                    offset = 0
+                )
+                _productByCategories.value = result
+                _productSectionTitle.value =
+                    "DUMMYJSON PRODUCTS: ${category.name.replaceFirstChar { it.uppercase() }}"
             } catch (e: Exception) {
                 handleRefreshError(e)
             } finally {
