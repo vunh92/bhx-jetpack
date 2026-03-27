@@ -16,16 +16,23 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.vunh.jetpack.bhx.R
+import com.vunh.jetpack.bhx.domain.model.UserProfile
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HeaderSection(isHome: Boolean, onMenuClick: () -> Unit = {}) {
+fun HeaderSection(
+    isHome: Boolean, 
+    userProfile: UserProfile? = null,
+    onMenuClick: () -> Unit = {},
+    onProfileClick: () -> Unit = {}
+) {
     val coroutineScope = rememberCoroutineScope()
     var isLoading by remember { mutableStateOf(false) }
 
@@ -57,51 +64,80 @@ fun HeaderSection(isHome: Boolean, onMenuClick: () -> Unit = {}) {
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
             ) {
+                // Avatar or Brand Icon
                 Box(
                     modifier = Modifier
                         .size(40.dp)
                         .clip(CircleShape)
-                        .background(Color.Yellow)
-                        .clickable {
-                            coroutineScope.launch {
-                                isLoading = true
-                                try {
-                                    // Simulated delay for visibility
-                                    delay(1000)
-                                } catch (e: Exception) {
-                                    e.printStackTrace()
-                                } finally {
-                                    isLoading = false
-                                }
-                            }
-                        },
+                        .background(if (userProfile != null) Color.White else Color.Yellow)
+                        .clickable { onProfileClick() },
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        stringResource(R.string.brand_short),
-                        color = Color.Black,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 10.sp
-                    )
-                }
-                Spacer(modifier = Modifier.width(8.dp))
-                Surface(
-                    color = Color.White.copy(alpha = 0.2f),
-                    shape = RoundedCornerShape(20.dp),
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(Icons.Default.LocationOn, contentDescription = null, tint = Color.Yellow, modifier = Modifier.size(16.dp))
+                    if (userProfile != null) {
+                        Icon(Icons.Default.Person, contentDescription = null, tint = Color(0xFF008848))
+                    } else {
                         Text(
-                            stringResource(R.string.header_confirm_delivery_location),
+                            stringResource(R.string.brand_short),
+                            color = Color.Black,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 10.sp
+                        )
+                    }
+                }
+                
+                Spacer(modifier = Modifier.width(8.dp))
+                
+                Column(modifier = Modifier.weight(1f)) {
+                    if (userProfile != null) {
+                        Text(
+                            text = "Chào, ${userProfile.name}",
                             color = Color.White,
                             fontSize = 14.sp,
-                            modifier = Modifier.padding(horizontal = 4.dp)
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
-                        Icon(Icons.Default.KeyboardArrowDown, contentDescription = null, tint = Color.White)
+                        Text(
+                            text = "${userProfile.points} điểm tích lũy",
+                            color = Color.Yellow,
+                            fontSize = 11.sp
+                        )
+                    } else {
+                        Surface(
+                            color = Color.White.copy(alpha = 0.2f),
+                            shape = RoundedCornerShape(20.dp),
+                            modifier = Modifier.wrapContentWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(Icons.Default.LocationOn, contentDescription = null, tint = Color.Yellow, modifier = Modifier.size(14.dp))
+                                Text(
+                                    stringResource(R.string.header_confirm_delivery_location),
+                                    color = Color.White,
+                                    fontSize = 13.sp,
+                                    modifier = Modifier.padding(horizontal = 4.dp)
+                                )
+                                Icon(Icons.Default.KeyboardArrowDown, contentDescription = null, tint = Color.White, modifier = Modifier.size(14.dp))
+                            }
+                        }
+                    }
+                }
+                
+                if (userProfile != null) {
+                    IconButton(onClick = { /* Handle notifications */ }) {
+                        BadgedBox(
+                            badge = { 
+                                if (userProfile.notificationCount > 0) {
+                                    Badge(containerColor = Color.Red) { 
+                                        Text(userProfile.notificationCount.toString(), color = Color.White) 
+                                    } 
+                                }
+                            }
+                        ) {
+                            Icon(Icons.Default.Notifications, contentDescription = null, tint = Color.White)
+                        }
                     }
                 }
             }

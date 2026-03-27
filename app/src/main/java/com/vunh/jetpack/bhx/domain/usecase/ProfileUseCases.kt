@@ -2,6 +2,8 @@ package com.vunh.jetpack.bhx.domain.usecase
 
 import androidx.compose.ui.graphics.Color
 import com.vunh.jetpack.bhx.data.local.ProfileManager
+import com.vunh.jetpack.bhx.data.remote.DummyJsonApiService
+import com.vunh.jetpack.bhx.data.remote.model.LoginRequest
 import com.vunh.jetpack.bhx.domain.model.UserProfile
 import com.vunh.jetpack.bhx.presentation.profile.CouponInfo
 import com.vunh.jetpack.bhx.presentation.profile.CouponProduct
@@ -24,15 +26,41 @@ class GetProfileUiStateUseCase @Inject constructor(
 }
 
 class LoginUseCase @Inject constructor(
-    private val profileManager: ProfileManager
+    private val profileManager: ProfileManager,
+    private val dummyJsonApiService: DummyJsonApiService
 ) {
     operator fun invoke(phoneNumber: String): UserProfile {
         val profile = UserProfile(
+            id = 1,
             name = "Anh Vu",
             phoneNumber = phoneNumber,
             rank = "CHƯA CÓ HẠNG",
             points = 17450,
             memberCode = "450138"
+        )
+        profileManager.saveProfile(profile)
+        return profile
+    }
+
+    suspend operator fun invoke(username: String, password: String): UserProfile {
+        val response = dummyJsonApiService.login(
+            LoginRequest(
+                username = username.trim(),
+                password = password,
+                expiresInMins = 30
+            )
+        )
+
+        val displayName = listOf(response.firstName, response.lastName)
+            .joinToString(" ")
+            .trim()
+        val profile = UserProfile(
+            id = 1,
+            name = displayName.ifEmpty { response.username },
+            phoneNumber = response.phone.orEmpty(),
+            rank = "CHƯA CÓ HẠNG",
+            points = 17450,
+            memberCode = response.id.toString().padStart(6, '0')
         )
         profileManager.saveProfile(profile)
         return profile

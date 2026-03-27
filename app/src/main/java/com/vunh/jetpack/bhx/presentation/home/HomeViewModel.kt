@@ -2,9 +2,11 @@ package com.vunh.jetpack.bhx.presentation.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.vunh.jetpack.bhx.data.local.ProfileManager
 import com.vunh.jetpack.bhx.domain.model.Category
 import com.vunh.jetpack.bhx.domain.model.Post
 import com.vunh.jetpack.bhx.domain.model.Product
+import com.vunh.jetpack.bhx.domain.model.UserProfile
 import com.vunh.jetpack.bhx.domain.usecase.GetDummyCategoriesUseCase
 import com.vunh.jetpack.bhx.domain.usecase.GetDummyProductsByCategoryUseCase
 import com.vunh.jetpack.bhx.domain.usecase.GetEscuelaProductsUseCase
@@ -27,8 +29,12 @@ class HomeViewModel @Inject constructor(
     private val syncPostsUseCase: SyncPostsUseCase,
     private val getEscuelaProductsUseCase: GetEscuelaProductsUseCase,
     private val getDummyCategoriesUseCase: GetDummyCategoriesUseCase,
-    private val getDummyProductsByCategoryUseCase: GetDummyProductsByCategoryUseCase
+    private val getDummyProductsByCategoryUseCase: GetDummyProductsByCategoryUseCase,
+    private val profileManager: ProfileManager
 ) : ViewModel() {
+
+    private val _userProfile = MutableStateFlow<UserProfile?>(profileManager.getProfile())
+    val userProfile: StateFlow<UserProfile?> = _userProfile.asStateFlow()
 
     private val _posts = MutableStateFlow<List<Post>>(emptyList())
     val posts: StateFlow<List<Post>> = _posts.asStateFlow()
@@ -72,6 +78,7 @@ class HomeViewModel @Inject constructor(
 
     private fun refreshAll(showRefreshIndicator: Boolean) {
         viewModelScope.launch {
+            _userProfile.value = profileManager.getProfile()
             _isLoading.value = true
             _isRefreshing.value = showRefreshIndicator
             _errorMessage.value = null

@@ -26,7 +26,9 @@ import javax.inject.Inject
 data class ProfileUiState(
     val phoneNumber: String = "",
     val showOtpDialog: Boolean = false,
-    val userProfile: UserProfile? = null
+    val userProfile: UserProfile? = null,
+    val isLoading: Boolean = false,
+    val errorMessage: String? = null
 ) {
     val isLoggedIn: Boolean = userProfile != null
 }
@@ -57,6 +59,29 @@ class ProfileViewModel @Inject constructor(
             userProfile = profile,
             showOtpDialog = false
         )
+    }
+
+    fun loginWithCredentials(username: String, password: String) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
+            try {
+                val profile = loginUseCase(username, password)
+                _uiState.value = _uiState.value.copy(
+                    userProfile = profile,
+                    showOtpDialog = false,
+                    isLoading = false
+                )
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    errorMessage = e.message ?: "An unexpected error occurred"
+                )
+            }
+        }
+    }
+
+    fun clearError() {
+        _uiState.value = _uiState.value.copy(errorMessage = null)
     }
 
     fun logout() {

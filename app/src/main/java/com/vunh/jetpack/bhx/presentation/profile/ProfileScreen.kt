@@ -13,6 +13,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -52,44 +53,59 @@ fun ProfileScreen(
     val uiState by viewModel.uiState.collectAsState()
     val userProfile = uiState.userProfile
     val isLoggedIn = uiState.isLoggedIn
+    val snackbarHostState = remember { SnackbarHostState() }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFFF0F2F5))
-    ) {
-        HeaderSection(isHome = false, onMenuClick = onMenuClick)
+    LaunchedEffect(uiState.errorMessage) {
+        uiState.errorMessage?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.clearError()
+        }
+    }
 
+    Scaffold(
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
+        topBar = { HeaderSection(isHome = false, onMenuClick = onMenuClick) },
+        containerColor = Color(0xFFF0F2F5)
+    ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp)
+                .padding(paddingValues)
         ) {
-            if (!isLoggedIn) {
-                LoginCard(
-                    onContinueClick = viewModel::showOtpDialog
-                )
-            } else {
-                LoggedInContent(
-                    profile = userProfile!!,
-                    onLogout = {
-                        viewModel.logout()
-                        onLogoutSuccess()
-                    },
-                    onNotificationClick = onNotificationClick,
-                    onScannerClick = onScannerClick,
-                    onWalletClick = onWalletClick,
-                    onCouponClick = onCouponClick,
-                    onSpecialOfferClick = onSpecialOfferClick,
-                    onGiftClick = onGiftClick,
-                    onPointExchangeClick = onPointExchangeClick
-                )
-            }
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(16.dp)
+            ) {
+                if (!isLoggedIn) {
+                    LoginCard(
+                        isLoading = uiState.isLoading,
+                        onContinueClick = viewModel::showOtpDialog,
+                        onCredentialLogin = viewModel::loginWithCredentials,
+                        onLoginSuccess = onLoginSuccess
+                    )
+                } else {
+                    LoggedInContent(
+                        profile = userProfile!!,
+                        onLogout = {
+                            viewModel.logout()
+                            onLogoutSuccess()
+                        },
+                        onNotificationClick = onNotificationClick,
+                        onScannerClick = onScannerClick,
+                        onWalletClick = onWalletClick,
+                        onCouponClick = onCouponClick,
+                        onSpecialOfferClick = onSpecialOfferClick,
+                        onGiftClick = onGiftClick,
+                        onPointExchangeClick = onPointExchangeClick
+                    )
+                }
 
-            Spacer(modifier = Modifier.height(16.dp))
-            SupportCard()
-            Spacer(modifier = Modifier.height(32.dp))
+                Spacer(modifier = Modifier.height(16.dp))
+                SupportCard()
+                Spacer(modifier = Modifier.height(32.dp))
+            }
         }
     }
 
@@ -306,9 +322,18 @@ fun ProfileMenuItem(
 }
 
 @Composable
-fun LoginCard(onContinueClick: (String) -> Unit) {
+fun LoginCard(
+    isLoading: Boolean = false,
+    onContinueClick: (String) -> Unit,
+    onCredentialLogin: (String, String) -> Unit,
+    onLoginSuccess: () -> Unit
+) {
+    var selectedTabIndex by remember { mutableIntStateOf(0) }
     var phoneNumber by remember { mutableStateOf("") }
+    var username by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
     val isValidPhone = phoneNumber.length == 10 && phoneNumber.startsWith("0") && phoneNumber.all { it.isDigit() }
+    val isValidCredentials = username.trim().isNotEmpty() && password.isNotBlank()
     
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -328,33 +353,121 @@ fun LoginCard(onContinueClick: (String) -> Unit) {
                 fontSize = 14.sp, color = Color.DarkGray
             )
             Spacer(modifier = Modifier.height(16.dp))
-            OutlinedTextField(
-                value = phoneNumber,
-                onValueChange = { if (it.length <= 10 && it.all { char -> char.isDigit() }) phoneNumber = it },
-                modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text("Số điện thoại", color = Color.LightGray) },
-                leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null, tint = Color.Gray) },
-                shape = RoundedCornerShape(8.dp),
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = if (isValidPhone) Color(0xFF008848) else Color.Gray,
-                    unfocusedBorderColor = Color.LightGray
-                )
-            )
+            val tabs = listOf("Số điện thoại", "Tài khoản")
+            TabRow(
+                selectedTabIndex = selectedTabIndex,
+                containerColor = Color(0xFFF7F9FB),
+                contentColor = Color(0xFF008848),
+                indicator = { tabPositions ->
+                    TabRowDefaults.SecondaryIndicator(
+                        modifier = Modifier.tabIndicatorOffset(tabPositions[selectedTabIndex]),
+                        color = Color(0xFF008848)
+                    )
+                }
+            ) {
+                tabs.forEachIndexed { index, title ->
+                    Tab(
+                        selected = selectedTabIndex == index,
+                        onClick = { selectedTabIndex = index },
+                        text = {
+                            Text(
+                                text = title,
+                                fontWeight = if (selectedTabIndex == index) FontWeight.Bold else FontWeight.Medium,
+                                fontSize = 13.sp
+                            )
+                        }
+                    )
+                }
+            }
             Spacer(modifier = Modifier.height(16.dp))
-            Button(
-                onClick = { onContinueClick(phoneNumber) },
-                enabled = isValidPhone,
-                modifier = Modifier.fillMaxWidth().height(48.dp),
-                shape = RoundedCornerShape(8.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFF008848),
-                    disabledContainerColor = Color(0xFF9FA8B8),
-                    contentColor = Color.White,
-                    disabledContentColor = Color.White.copy(alpha = 0.7f)
+            if (selectedTabIndex == 0) {
+                OutlinedTextField(
+                    value = phoneNumber,
+                    onValueChange = { if (it.length <= 10 && it.all { char -> char.isDigit() }) phoneNumber = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = { Text("Số điện thoại", color = Color.LightGray) },
+                    leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null, tint = Color.Gray) },
+                    shape = RoundedCornerShape(8.dp),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    enabled = !isLoading,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = if (isValidPhone) Color(0xFF008848) else Color.Gray,
+                        unfocusedBorderColor = Color.LightGray
+                    )
                 )
-            ) { Text("Tiếp tục", fontWeight = FontWeight.Bold) }
+                Spacer(modifier = Modifier.height(16.dp))
+                Button(
+                    onClick = { onContinueClick(phoneNumber) },
+                    enabled = isValidPhone && !isLoading,
+                    modifier = Modifier.fillMaxWidth().height(48.dp),
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF008848),
+                        disabledContainerColor = Color(0xFF9FA8B8),
+                        contentColor = Color.White,
+                        disabledContentColor = Color.White.copy(alpha = 0.7f)
+                    )
+                ) { 
+                    if (isLoading) {
+                        CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White, strokeWidth = 2.dp)
+                    } else {
+                        Text("Tiếp tục", fontWeight = FontWeight.Bold) 
+                    }
+                }
+            } else {
+                OutlinedTextField(
+                    value = username,
+                    onValueChange = { username = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = { Text("Username", color = Color.LightGray) },
+                    leadingIcon = { Icon(Icons.Default.Person, contentDescription = null, tint = Color.Gray) },
+                    shape = RoundedCornerShape(8.dp),
+                    singleLine = true,
+                    enabled = !isLoading,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = if (username.isNotBlank()) Color(0xFF008848) else Color.Gray,
+                        unfocusedBorderColor = Color.LightGray
+                    )
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = password,
+                    onValueChange = { password = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = { Text("Password", color = Color.LightGray) },
+                    leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null, tint = Color.Gray) },
+                    shape = RoundedCornerShape(8.dp),
+                    singleLine = true,
+                    enabled = !isLoading,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = if (password.isNotBlank()) Color(0xFF008848) else Color.Gray,
+                        unfocusedBorderColor = Color.LightGray
+                    )
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Button(
+                    onClick = {
+                        onCredentialLogin(username, password)
+                    },
+                    enabled = isValidCredentials && !isLoading,
+                    modifier = Modifier.fillMaxWidth().height(48.dp),
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF008848),
+                        disabledContainerColor = Color(0xFF9FA8B8),
+                        contentColor = Color.White,
+                        disabledContentColor = Color.White.copy(alpha = 0.7f)
+                    )
+                ) { 
+                    if (isLoading) {
+                        CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White, strokeWidth = 2.dp)
+                    } else {
+                        Text("Đăng nhập", fontWeight = FontWeight.Bold) 
+                    }
+                }
+            }
         }
     }
 }

@@ -46,35 +46,36 @@ import com.vunh.jetpack.bhx.presentation.profile.SpecialOfferScreen
 import com.vunh.jetpack.bhx.presentation.profile.WalletScreen
 import com.vunh.jetpack.bhx.ui.theme.BhxTheme
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+    @Inject
+    lateinit var profileManager: ProfileManager
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
             BhxTheme {
-                BhxApp()
+                BhxApp(profileManager)
             }
         }
     }
 }
 
 @Composable
-fun BhxApp() {
-    val context = LocalContext.current
-    val profileManager = remember { ProfileManager(context) }
+fun BhxApp(profileManager: ProfileManager) {
     val navController = rememberNavController()
-    
     var isMenuOpen by rememberSaveable { mutableStateOf(false) }
     
-    // Track profile changes to update tab label and badge.
-    var profileTrigger by remember { mutableIntStateOf(0) }
-    val userProfile = remember(profileTrigger) { profileManager.getProfile() }
+    // Automatically update UI when profile changes (login/logout)
+    val userProfile by profileManager.profileFlow.collectAsState()
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
     val showBottomBar = AppDestinations.entries.any { it.route == currentRoute }
+    
     val navigateToTopLevel: (String) -> Unit = { route ->
         navController.navigate(route) {
             popUpTo(navController.graph.startDestinationId) { saveState = true }
@@ -99,13 +100,13 @@ fun BhxApp() {
                         icon = {
                             BadgedBox(
                                 badge = {
-                                    if (destination == AppDestinations.PROFILE && userProfile != null && userProfile.notificationCount > 0) {
+                                    if (destination == AppDestinations.PROFILE && userProfile != null && userProfile!!.notificationCount > 0) {
                                         Badge(
                                             containerColor = Color.Red,
                                             contentColor = Color.White,
                                             modifier = Modifier.clip(CircleShape)
                                         ) {
-                                            Text(userProfile.notificationCount.toString(), fontSize = 10.sp)
+                                            Text(userProfile?.notificationCount.toString(), fontSize = 10.sp)
                                         }
                                     }
                                 }
@@ -118,7 +119,8 @@ fun BhxApp() {
                         },
                         label = { 
                             val label = if (destination == AppDestinations.PROFILE && userProfile != null) {
-                                userProfile.name.split(" ").lastOrNull()?.let { "A.$it" } ?: userProfile.name
+                                // Update bottom tab label with user name after login
+                                userProfile?.name?.split(" ")?.lastOrNull()?.let { "A.$it" } ?: userProfile?.name ?: destination.label
                             } else {
                                 destination.label
                             }
@@ -134,20 +136,14 @@ fun BhxApp() {
         ) {
             BhxNavHost(
                 navController = navController,
-                isLoggedIn = userProfile != null,
                 onMenuClick = { isMenuOpen = true },
-                onLoginSuccess = { profileTrigger++ },
-                onLogoutSuccess = { profileTrigger++ },
                 onNavigateToProfile = { navigateToTopLevel(AppDestinations.PROFILE.route) }
             )
         }
     } else {
         BhxNavHost(
             navController = navController,
-            isLoggedIn = userProfile != null,
             onMenuClick = { isMenuOpen = true },
-            onLoginSuccess = { profileTrigger++ },
-            onLogoutSuccess = { profileTrigger++ },
             onNavigateToProfile = { navigateToTopLevel(AppDestinations.PROFILE.route) }
         )
     }
@@ -156,10 +152,7 @@ fun BhxApp() {
 @Composable
 fun BhxNavHost(
     navController: androidx.navigation.NavHostController,
-    isLoggedIn: Boolean,
     onMenuClick: () -> Unit,
-    onLoginSuccess: () -> Unit,
-    onLogoutSuccess: () -> Unit,
     onNavigateToProfile: () -> Unit
 ) {
     NavHost(
@@ -170,8 +163,7 @@ fun BhxNavHost(
         composable(AppDestinations.HOME.route) {
             HomeScreen(
                 onMenuClick = onMenuClick,
-                onNavigateToProfile = onNavigateToProfile,
-                isLoggedIn = isLoggedIn
+                onNavigateToProfile = onNavigateToProfile
             )
         }
         composable(AppDestinations.HISTORY.route) {
@@ -189,8 +181,6 @@ fun BhxNavHost(
         composable(AppDestinations.PROFILE.route) {
             ProfileScreen(
                 onMenuClick = onMenuClick,
-                onLoginSuccess = onLoginSuccess,
-                onLogoutSuccess = onLogoutSuccess,
                 onNotificationClick = { navController.navigate("notifications") },
                 onScannerClick = { navController.navigate("scanner") },
                 onWalletClick = { balance -> navController.navigate("wallet/$balance") },

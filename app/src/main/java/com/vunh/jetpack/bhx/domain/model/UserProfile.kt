@@ -1,6 +1,7 @@
 package com.vunh.jetpack.bhx.domain.model
 
 data class UserProfile(
+    val id: Int,
     val name: String,
     val phoneNumber: String,
     val rank: String,

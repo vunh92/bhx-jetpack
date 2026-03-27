@@ -44,9 +44,11 @@ import kotlinx.coroutines.yield
 fun HomeScreen(
     onMenuClick: () -> Unit,
     onNavigateToProfile: () -> Unit,
-    isLoggedIn: Boolean,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
+    val userProfile by viewModel.userProfile.collectAsState()
+    val isLoggedIn = userProfile != null
+    
     val posts by viewModel.posts.collectAsState()
     val products by viewModel.products.collectAsState()
     val productByCategories by viewModel.productByCategories.collectAsState()
@@ -118,7 +120,12 @@ fun HomeScreen(
             .fillMaxSize()
             .background(Color(0xFFF5F5F5))
     ) {
-        HeaderSection(isHome = true, onMenuClick = onMenuClick)
+        HeaderSection(
+            isHome = true, 
+            userProfile = userProfile,
+            onMenuClick = onMenuClick,
+            onProfileClick = onNavigateToProfile
+        )
 
         if (isLoading && posts.isEmpty() && products.isEmpty() && dummyCategories.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
