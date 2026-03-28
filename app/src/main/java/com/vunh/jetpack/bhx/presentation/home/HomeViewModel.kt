@@ -33,8 +33,8 @@ class HomeViewModel @Inject constructor(
     private val profileManager: ProfileManager
 ) : ViewModel() {
 
-    private val _userProfile = MutableStateFlow<UserProfile?>(profileManager.getProfile())
-    val userProfile: StateFlow<UserProfile?> = _userProfile.asStateFlow()
+    // Trực tiếp sử dụng profileFlow từ ProfileManager để đảm bảo UI luôn cập nhật tự động
+    val userProfile: StateFlow<UserProfile?> = profileManager.profileFlow
 
     private val _posts = MutableStateFlow<List<Post>>(emptyList())
     val posts: StateFlow<List<Post>> = _posts.asStateFlow()
@@ -64,11 +64,13 @@ class HomeViewModel @Inject constructor(
     val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
 
     init {
+        // Observe posts from database
         viewModelScope.launch {
             observePostsUseCase().collect { posts ->
                 _posts.value = posts
             }
         }
+
         refreshAll(showRefreshIndicator = false)
     }
 
@@ -78,7 +80,6 @@ class HomeViewModel @Inject constructor(
 
     private fun refreshAll(showRefreshIndicator: Boolean) {
         viewModelScope.launch {
-            _userProfile.value = profileManager.getProfile()
             _isLoading.value = true
             _isRefreshing.value = showRefreshIndicator
             _errorMessage.value = null

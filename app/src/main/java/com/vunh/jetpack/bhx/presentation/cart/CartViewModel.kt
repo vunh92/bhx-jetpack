@@ -2,14 +2,13 @@ package com.vunh.jetpack.bhx.presentation.cart
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.vunh.jetpack.bhx.data.local.ProfileManager
 import com.vunh.jetpack.bhx.data.remote.DummyJsonApiService
 import com.vunh.jetpack.bhx.data.remote.model.CartProduct
 import com.vunh.jetpack.bhx.domain.usecase.GetCartUiStateUseCase
 import com.vunh.jetpack.bhx.domain.model.UserProfile
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -31,40 +30,69 @@ data class CartUiState(
 @HiltViewModel
 class CartViewModel @Inject constructor(
     private val getCartUiStateUseCase: GetCartUiStateUseCase,
-    private val dummyJsonApiService: DummyJsonApiService
+    private val dummyJsonApiService: DummyJsonApiService,
+    private val profileManager: ProfileManager
 ) : ViewModel() {
-    private val _uiState = MutableStateFlow(getCartUiStateUseCase())
-    val uiState: StateFlow<CartUiState> = _uiState.asStateFlow()
+
+    private val _cartProducts = MutableStateFlow<List<CartProduct>>(emptyList())
+    private val _isLoading = MutableStateFlow(false)
+    private val _errorMessage = MutableStateFlow<String?>(null)
+
+    // Kết hợp các flow để tạo ra uiState duy nhất, tự động cập nhật khi userProfile thay đổi
+    val uiState: StateFlow<CartUiState> = combine(
+        profileManager.profileFlow,
+        _cartProducts,
+        _isLoading,
+        _errorMessage
+    ) { profile, products, loading, error ->
+        CartUiState(
+            userProfile = profile,
+            categories = getCartUiStateUseCase().categories,
+            cartProducts = products,
+            isLoading = loading,
+            errorMessage = error
+        )
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = CartUiState(
+            userProfile = profileManager.getProfile(),
+            categories = getCartUiStateUseCase().categories,
+            isLoading = true
+        )
+    )
 
     init {
-        loadUserCarts()
-    }
-
-    private fun loadUserCarts() {
-        val userProfile = uiState.value.userProfile
-        if (userProfile != null) {
-            viewModelScope.launch {
-                _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
-                try {
-                    val response = dummyJsonApiService.getUserCarts(userProfile.id)
-                    // Lấy danh sách sản phẩm từ tất cả các giỏ hàng của user
-                    val allProducts = response.carts.flatMap { it.products }
-                    _uiState.value = _uiState.value.copy(
-                        cartProducts = allProducts,
-                        isLoading = false
-                    )
-                } catch (e: Exception) {
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        errorMessage = e.message ?: "Failed to load cart"
-                    )
+        // Theo dõi sự thay đổi của profile để tải dữ liệu giỏ hàng tương ứng
+        viewModelScope.launch {
+            profileManager.profileFlow.collect { profile ->
+                if (profile != null) {
+                    loadUserCarts(profile.id)
+                } else {
+                    _cartProducts.value = emptyList()
+                    _errorMessage.value = null
                 }
             }
         }
     }
 
-    fun refreshProfile() {
-        _uiState.value = getCartUiStateUseCase()
-        loadUserCarts()
+    private fun loadUserCarts(userId: Int) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            _errorMessage.value = null
+            try {
+                val response = dummyJsonApiService.getUserCarts(userId)
+                val allProducts = response.carts.flatMap { it.products }
+                _cartProducts.value = allProducts
+            } catch (e: Exception) {
+                _errorMessage.value = e.message ?: "Failed to load cart"
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
+    fun refresh() {
+        profileManager.getProfile()?.let { loadUserCarts(it.id) }
     }
 }

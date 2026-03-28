@@ -9,6 +9,7 @@ import com.vunh.jetpack.bhx.domain.model.UserProfile
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import androidx.core.content.edit
 
 class ProfileManager(context: Context) {
     private val masterKey = MasterKey.Builder(context)
@@ -34,7 +35,7 @@ class ProfileManager(context: Context) {
 
     fun saveProfile(profile: UserProfile) {
         val json = gson.toJson(profile)
-        sharedPreferences.edit().putString("user_profile", json).apply()
+        sharedPreferences.edit { putString("user_profile", json) }
         _profileFlow.value = profile
     }
 
@@ -52,7 +53,7 @@ class ProfileManager(context: Context) {
     }
 
     fun saveToken(token: String) {
-        sharedPreferences.edit().putString("auth_token", token).apply()
+        sharedPreferences.edit { putString("auth_token", token) }
     }
 
     fun getToken(): String? {
@@ -60,10 +61,10 @@ class ProfileManager(context: Context) {
     }
 
     fun clearProfile() {
-        sharedPreferences.edit()
-            .remove("user_profile")
-            .remove("auth_token")
-            .apply()
+        sharedPreferences.edit {
+            remove("user_profile")
+                .remove("auth_token")
+        }
         _profileFlow.value = null
     }
 
