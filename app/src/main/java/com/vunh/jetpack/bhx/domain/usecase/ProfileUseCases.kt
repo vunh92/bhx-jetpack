@@ -31,7 +31,7 @@ class LoginUseCase @Inject constructor(
 ) {
     operator fun invoke(phoneNumber: String): UserProfile {
         val profile = UserProfile(
-            id = 1,
+            id = 6,
             name = "Anh Vu",
             phoneNumber = phoneNumber,
             rank = "CHƯA CÓ HẠNG",
@@ -55,7 +55,7 @@ class LoginUseCase @Inject constructor(
             .joinToString(" ")
             .trim()
         val profile = UserProfile(
-            id = 1,
+            id = 6,
             name = displayName.ifEmpty { response.username },
             phoneNumber = response.phone.orEmpty(),
             rank = "CHƯA CÓ HẠNG",

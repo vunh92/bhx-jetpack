@@ -1,6 +1,8 @@
 package com.vunh.jetpack.bhx.domain.usecase
 
 import com.vunh.jetpack.bhx.data.local.ProfileManager
+import com.vunh.jetpack.bhx.data.remote.DummyJsonApiService
+import com.vunh.jetpack.bhx.data.remote.model.CartResponse
 import com.vunh.jetpack.bhx.presentation.cart.CartCategoryUi
 import com.vunh.jetpack.bhx.presentation.cart.CartUiState
 import javax.inject.Inject
@@ -19,4 +21,12 @@ class GetCartUiStateUseCase @Inject constructor(
             CartCategoryUi("Xem tất cả", isViewAll = true)
         )
     )
+}
+
+class GetCartByIdUseCase @Inject constructor(
+    private val dummyJsonApiService: DummyJsonApiService
+) {
+    suspend operator fun invoke(cartId: Int): CartResponse {
+        return dummyJsonApiService.getCartById(cartId)
+    }
 }
