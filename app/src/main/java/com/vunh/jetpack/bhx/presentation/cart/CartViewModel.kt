@@ -17,10 +17,15 @@ data class CartCategoryUi(
     val isViewAll: Boolean = false
 )
 
+data class CartItemUiState(
+    val cartId: Int,
+    val product: CartProduct
+)
+
 data class CartUiState(
     val userProfile: UserProfile? = null,
     val categories: List<CartCategoryUi> = emptyList(),
-    val cartProducts: List<CartProduct> = emptyList(),
+    val cartItems: List<CartItemUiState> = emptyList(),
     val isLoading: Boolean = false,
     val errorMessage: String? = null
 ) {
@@ -34,21 +39,20 @@ class CartViewModel @Inject constructor(
     private val profileManager: ProfileManager
 ) : ViewModel() {
 
-    private val _cartProducts = MutableStateFlow<List<CartProduct>>(emptyList())
+    private val _cartItems = MutableStateFlow<List<CartItemUiState>>(emptyList())
     private val _isLoading = MutableStateFlow(false)
     private val _errorMessage = MutableStateFlow<String?>(null)
 
-    // Kết hợp các flow để tạo ra uiState duy nhất, tự động cập nhật khi userProfile thay đổi
     val uiState: StateFlow<CartUiState> = combine(
         profileManager.profileFlow,
-        _cartProducts,
+        _cartItems,
         _isLoading,
         _errorMessage
-    ) { profile, products, loading, error ->
+    ) { profile, items, loading, error ->
         CartUiState(
             userProfile = profile,
             categories = getCartUiStateUseCase().categories,
-            cartProducts = products,
+            cartItems = items,
             isLoading = loading,
             errorMessage = error
         )
@@ -63,13 +67,12 @@ class CartViewModel @Inject constructor(
     )
 
     init {
-        // Theo dõi sự thay đổi của profile để tải dữ liệu giỏ hàng tương ứng
         viewModelScope.launch {
             profileManager.profileFlow.collect { profile ->
                 if (profile != null) {
                     loadUserCarts(profile.id)
                 } else {
-                    _cartProducts.value = emptyList()
+                    _cartItems.value = emptyList()
                     _errorMessage.value = null
                 }
             }
@@ -82,8 +85,12 @@ class CartViewModel @Inject constructor(
             _errorMessage.value = null
             try {
                 val response = dummyJsonApiService.getUserCarts(userId)
-                val allProducts = response.carts.flatMap { it.products }
-                _cartProducts.value = allProducts
+                val allItems = response.carts.flatMap { cart ->
+                    cart.products.map { product ->
+                        CartItemUiState(cartId = cart.id, product = product)
+                    }
+                }
+                _cartItems.value = allItems
             } catch (e: Exception) {
                 _errorMessage.value = e.message ?: "Failed to load cart"
             } finally {

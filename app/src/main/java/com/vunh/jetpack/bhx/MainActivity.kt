@@ -32,7 +32,9 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.vunh.jetpack.bhx.data.local.ProfileManager
+import com.vunh.jetpack.bhx.presentation.cart.CartDetailScreen
 import com.vunh.jetpack.bhx.presentation.cart.CartScreen
+import com.vunh.jetpack.bhx.presentation.cart.ProductDetailScreen
 import com.vunh.jetpack.bhx.presentation.category.CategoryScreen
 import com.vunh.jetpack.bhx.presentation.history.OrderHistoryScreen
 import com.vunh.jetpack.bhx.presentation.home.HomeScreen
@@ -175,8 +177,21 @@ fun BhxNavHost(
         composable(AppDestinations.CART.route) {
             CartScreen(
                 onMenuClick = onMenuClick,
-                onNavigateToLogin = onNavigateToProfile
+                onNavigateToLogin = onNavigateToProfile,
+                onProductClick = { productId -> navController.navigate("product_detail/$productId") }
             )
+        }
+        composable(
+            route = "cart_detail/{cartId}",
+            arguments = listOf(navArgument("cartId") { type = NavType.IntType })
+        ) {
+            CartDetailScreen(onBack = { navController.popBackStack() })
+        }
+        composable(
+            route = "product_detail/{productId}",
+            arguments = listOf(navArgument("productId") { type = NavType.IntType })
+        ) {
+            ProductDetailScreen(onBack = { navController.popBackStack() })
         }
         composable(AppDestinations.PROFILE.route) {
             ProfileScreen(

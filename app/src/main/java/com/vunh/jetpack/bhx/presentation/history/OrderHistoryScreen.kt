@@ -10,6 +10,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Receipt
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -26,6 +27,7 @@ import com.vunh.jetpack.bhx.data.remote.model.CartResponse
 import com.vunh.jetpack.bhx.presentation.common.HeaderSection
 import java.util.Locale
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun OrderHistoryScreen(
     onMenuClick: () -> Unit,
@@ -99,14 +101,16 @@ fun OrderHistoryScreen(
                     }
                 }
 
-                if (uiState.isLoading) {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(color = Color(0xFF008848))
+                PullToRefreshBox(
+                    isRefreshing = uiState.isLoading,
+                    onRefresh = viewModel::refresh,
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    if (uiState.orders.isEmpty() && !uiState.isLoading) {
+                        EmptyHistoryContent()
+                    } else {
+                        OrderHistoryList(orders = uiState.orders)
                     }
-                } else if (uiState.orders.isEmpty()) {
-                    EmptyHistoryContent()
-                } else {
-                    OrderHistoryList(orders = uiState.orders)
                 }
             }
         }

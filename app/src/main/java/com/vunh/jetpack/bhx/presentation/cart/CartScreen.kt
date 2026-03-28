@@ -12,6 +12,7 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.ShoppingBasket
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -33,11 +34,14 @@ import coil.compose.AsyncImage
 import com.vunh.jetpack.bhx.R
 import com.vunh.jetpack.bhx.data.remote.model.CartProduct
 import com.vunh.jetpack.bhx.presentation.common.HeaderSection
+import java.util.Locale
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CartScreen(
     onMenuClick: () -> Unit,
     onNavigateToLogin: () -> Unit,
+    onProductClick: (Int) -> Unit = {},
     viewModel: CartViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -64,27 +68,36 @@ fun CartScreen(
                     Text(stringResource(R.string.action_login), fontWeight = FontWeight.Bold)
                 }
             }
-        } else if (uiState.isLoading) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = Color(0xFF008848))
-            }
-        } else if (uiState.cartProducts.isEmpty()) {
-            EmptyCartContent(
-                userName = userProfile?.name?.split(" ")?.lastOrNull() ?: "",
-                categories = uiState.categories,
-                onNavigateToLogin = onNavigateToLogin
-            )
         } else {
-            CartListContent(
-                products = uiState.cartProducts,
-                userName = userProfile?.name?.split(" ")?.lastOrNull() ?: ""
-            )
+            PullToRefreshBox(
+                isRefreshing = uiState.isLoading,
+                onRefresh = viewModel::refresh,
+                modifier = Modifier.fillMaxSize()
+            ) {
+                if (uiState.cartItems.isEmpty() && !uiState.isLoading) {
+                    EmptyCartContent(
+                        userName = userProfile?.name?.split(" ")?.lastOrNull() ?: "",
+                        categories = uiState.categories,
+                        onNavigateToLogin = onNavigateToLogin
+                    )
+                } else {
+                    CartListContent(
+                        items = uiState.cartItems,
+                        userName = userProfile?.name?.split(" ")?.lastOrNull() ?: "",
+                        onItemClick = onProductClick
+                    )
+                }
+            }
         }
     }
 }
 
 @Composable
-fun CartListContent(products: List<CartProduct>, userName: String) {
+fun CartListContent(
+    items: List<CartItemUiState>, 
+    userName: String,
+    onItemClick: (Int) -> Unit
+) {
     Column(modifier = Modifier.fillMaxSize()) {
         Text(
             text = "Giỏ hàng của bạn ($userName)",
@@ -98,8 +111,11 @@ fun CartListContent(products: List<CartProduct>, userName: String) {
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            items(products) { product ->
-                CartProductItem(product)
+            items(items) { item ->
+                CartProductItem(
+                    product = item.product,
+                    onClick = { onItemClick(item.product.id) }
+                )
             }
         }
 
@@ -117,9 +133,9 @@ fun CartListContent(products: List<CartProduct>, userName: String) {
             ) {
                 Column {
                     Text("Tổng cộng", fontSize = 14.sp, color = Color.Gray)
-                    val totalPrice = products.sumOf { it.total }
+                    val totalPrice = items.sumOf { it.product.total }
                     Text(
-                        text = "${String.format("%,.0f", totalPrice).replace(',', '.')}đ",
+                        text = "${String.format(Locale.getDefault(), "%,.0f", totalPrice).replace(',', '.')}đ",
                         fontWeight = FontWeight.Bold,
                         fontSize = 18.sp,
                         color = Color.Red
@@ -139,9 +155,11 @@ fun CartListContent(products: List<CartProduct>, userName: String) {
 }
 
 @Composable
-fun CartProductItem(product: CartProduct) {
+fun CartProductItem(product: CartProduct, onClick: () -> Unit) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         shape = RoundedCornerShape(8.dp)
     ) {
@@ -169,7 +187,7 @@ fun CartProductItem(product: CartProduct) {
                 Spacer(modifier = Modifier.height(4.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = "${String.format("%,.0f", product.price).replace(',', '.')}đ",
+                        text = "${String.format(Locale.getDefault(), "%,.0f", product.price).replace(',', '.')}đ",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.Red
@@ -301,17 +319,11 @@ fun EmptyCartContent(
                     withStyle(style = SpanStyle(color = Color.Gray)) {
                         append(stringResource(R.string.cart_or))
                     }
-                    withStyle(style = SpanStyle(color = Color(0xFF008848))) {
-                        append(stringResource(R.string.cart_view_previous_orders, userName))
+                    append(" ")
+                    withStyle(style = SpanStyle(color = Color(0xFF008848), fontWeight = FontWeight.Bold)) {
+                        append(stringResource(R.string.action_view_details))
                     }
-                },
-                fontSize = 14.sp
-            )
-            Icon(
-                Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = null,
-                tint = Color(0xFF008848),
-                modifier = Modifier.size(18.dp)
+                }
             )
         }
     }

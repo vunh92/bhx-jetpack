@@ -3,6 +3,7 @@ package com.vunh.jetpack.bhx.data.remote
 import com.vunh.jetpack.bhx.data.remote.model.CartResponse
 import com.vunh.jetpack.bhx.data.remote.model.DummyCategoryModel
 import com.vunh.jetpack.bhx.data.remote.model.DummyCategoryProductsResponse
+import com.vunh.jetpack.bhx.data.remote.model.DummyProductModel
 import com.vunh.jetpack.bhx.data.remote.model.DummyProductResponse
 import com.vunh.jetpack.bhx.data.remote.model.LoginRequest
 import com.vunh.jetpack.bhx.data.remote.model.LoginResponse
@@ -23,6 +24,11 @@ interface DummyJsonApiService {
         @Query("limit") limit: Int,
         @Query("skip") skip: Int
     ): DummyProductResponse
+
+    @GET("products/{id}")
+    suspend fun getProductById(
+        @Path("id") productId: Int
+    ): DummyProductModel
 
     @GET("products/categories")
     suspend fun getCategories(): List<DummyCategoryModel>
