@@ -7,11 +7,7 @@ import com.vunh.jetpack.bhx.data.remote.model.DummyProductModel
 import com.vunh.jetpack.bhx.data.remote.model.DummyProductResponse
 import com.vunh.jetpack.bhx.data.remote.model.LoginRequest
 import com.vunh.jetpack.bhx.data.remote.model.LoginResponse
-import retrofit2.http.GET
-import retrofit2.http.Body
-import retrofit2.http.POST
-import retrofit2.http.Path
-import retrofit2.http.Query
+import retrofit2.http.*
 
 interface DummyJsonApiService {
     @POST("auth/login")
@@ -49,6 +45,22 @@ interface DummyJsonApiService {
     suspend fun getUserCarts(
         @Path("id") userId: Int
     ): UserCartsResponse
+
+    @POST("carts/add")
+    suspend fun addCart(
+        @Body request: AddCartRequest
+    ): CartResponse
+
+    @PUT("carts/{id}")
+    suspend fun updateCart(
+        @Path("id") cartId: Int,
+        @Body request: UpdateCartRequest
+    ): CartResponse
+
+    @DELETE("carts/{id}")
+    suspend fun deleteCart(
+        @Path("id") cartId: Int
+    ): CartResponse
 }
 
 data class UserCartsResponse(
@@ -56,4 +68,23 @@ data class UserCartsResponse(
     val total: Int,
     val skip: Int,
     val limit: Int
+)
+
+data class AddCartRequest(
+    val userId: Int,
+    val products: List<AddCartProduct>
+)
+
+data class AddCartProduct(
+    val id: Int,
+    val quantity: Int
+)
+
+data class UpdateCartRequest(
+    val products: List<UpdateCartProduct>
+)
+
+data class UpdateCartProduct(
+    val id: Int,
+    val quantity: Int
 )

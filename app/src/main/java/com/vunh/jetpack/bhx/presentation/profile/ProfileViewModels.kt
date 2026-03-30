@@ -1,8 +1,11 @@
 package com.vunh.jetpack.bhx.presentation.profile
 
+import android.content.Context
+import android.net.Uri
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.vunh.jetpack.bhx.data.remote.EscuelaApiService
 import com.vunh.jetpack.bhx.domain.usecase.GetGiftUiStateUseCase
 import com.vunh.jetpack.bhx.domain.usecase.GetPointExchangeUiStateUseCase
 import com.vunh.jetpack.bhx.domain.usecase.GetProfileUiStateUseCase
@@ -21,6 +24,11 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
+import okhttp3.RequestBody.Companion.asRequestBody
+import java.io.File
+import java.io.FileOutputStream
 import javax.inject.Inject
 
 data class ProfileUiState(
@@ -28,7 +36,8 @@ data class ProfileUiState(
     val showOtpDialog: Boolean = false,
     val userProfile: UserProfile? = null,
     val isLoading: Boolean = false,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val avatarUrl: String? = null
 ) {
     val isLoggedIn: Boolean = userProfile != null
 }
@@ -37,7 +46,8 @@ data class ProfileUiState(
 class ProfileViewModel @Inject constructor(
     private val getProfileUiStateUseCase: GetProfileUiStateUseCase,
     private val loginUseCase: LoginUseCase,
-    private val logoutUseCase: LogoutUseCase
+    private val logoutUseCase: LogoutUseCase,
+    private val escuelaApiService: EscuelaApiService
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(getProfileUiStateUseCase())
     val uiState: StateFlow<ProfileUiState> = _uiState.asStateFlow()
@@ -78,6 +88,38 @@ class ProfileViewModel @Inject constructor(
                 )
             }
         }
+    }
+
+    fun uploadAvatar(context: Context, uri: Uri) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
+            try {
+                val file = uriToFile(context, uri)
+                val requestFile = file.asRequestBody("image/*".toMediaTypeOrNull())
+                val body = MultipartBody.Part.createFormData("file", file.name, requestFile)
+                
+                val response = escuelaApiService.uploadFile(body)
+                _uiState.value = _uiState.value.copy(
+                    avatarUrl = response.location,
+                    isLoading = false
+                )
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    errorMessage = "Upload failed: ${e.message}"
+                )
+            }
+        }
+    }
+
+    private fun uriToFile(context: Context, uri: Uri): File {
+        val file = File(context.cacheDir, "temp_avatar_${System.currentTimeMillis()}.jpg")
+        context.contentResolver.openInputStream(uri)?.use { input ->
+            FileOutputStream(file).use { output ->
+                input.copyTo(output)
+            }
+        }
+        return file
     }
 
     fun clearError() {

@@ -48,6 +48,7 @@ fun ProfileScreen(
     onSpecialOfferClick: () -> Unit = {},
     onGiftClick: () -> Unit = {},
     onPointExchangeClick: () -> Unit = {},
+    onEditProfileClick: () -> Unit = {},
     viewModel: ProfileViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -98,7 +99,8 @@ fun ProfileScreen(
                         onCouponClick = onCouponClick,
                         onSpecialOfferClick = onSpecialOfferClick,
                         onGiftClick = onGiftClick,
-                        onPointExchangeClick = onPointExchangeClick
+                        onPointExchangeClick = onPointExchangeClick,
+                        onEditProfileClick = onEditProfileClick
                     )
                 }
 
@@ -131,7 +133,8 @@ fun LoggedInContent(
     onCouponClick: () -> Unit,
     onSpecialOfferClick: () -> Unit,
     onGiftClick: () -> Unit,
-    onPointExchangeClick: () -> Unit
+    onPointExchangeClick: () -> Unit,
+    onEditProfileClick: () -> Unit
 ) {
     Column {
         // Membership Card
@@ -262,7 +265,7 @@ fun LoggedInContent(
             shape = RoundedCornerShape(12.dp)
         ) {
             Column {
-                ProfileMenuItem(Icons.Default.Person, "Sửa thông tin cá nhân")
+                ProfileMenuItem(Icons.Default.Person, "Sửa thông tin cá nhân", onClick = onEditProfileClick)
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = Color(0xFFF5F5F5))
                 ProfileMenuItem(Icons.Default.LocationOn, "Địa chỉ nhận hàng", badge = profile.addressCount.takeIf { it > 0 }?.toString())
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = Color(0xFFF5F5F5))

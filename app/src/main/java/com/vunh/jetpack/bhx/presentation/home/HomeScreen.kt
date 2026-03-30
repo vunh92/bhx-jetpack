@@ -1,5 +1,6 @@
 package com.vunh.jetpack.bhx.presentation.home
 
+import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -24,6 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -49,6 +51,7 @@ fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel(),
     onEscuelaProductClick: (Int) -> Unit = {},
 ) {
+    val context = LocalContext.current
     val userProfile by viewModel.userProfile.collectAsState()
     val posts by viewModel.posts.collectAsState()
     val products by viewModel.products.collectAsState()
@@ -59,6 +62,13 @@ fun HomeScreen(
     val isLoading by viewModel.isLoading.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
+    val toastMessage by viewModel.toastMessage.collectAsState(initial = null)
+
+    LaunchedEffect(toastMessage) {
+        toastMessage?.let {
+            Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+        }
+    }
 
     HomeContent(
         userProfile = userProfile,
@@ -77,7 +87,8 @@ fun HomeScreen(
         onFetchDummyProductsByCategory = viewModel::fetchDummyProductsByCategory,
         onEscuelaProductClick = onEscuelaProductClick,
         onFetchProducts = viewModel::fetchProducts,
-        onRefreshPosts = viewModel::refreshPosts
+        onRefreshPosts = viewModel::refreshPosts,
+        onAddToCart = viewModel::addToCart
     )
 }
 
@@ -101,6 +112,7 @@ fun HomeContent(
     onEscuelaProductClick: (Int) -> Unit,
     onFetchProducts: () -> Unit,
     onRefreshPosts: () -> Unit,
+    onAddToCart: () -> Unit,
 ) {
     val isLoggedIn = userProfile != null
     
@@ -221,6 +233,7 @@ fun HomeContent(
                         errorMessage = errorMessage,
                         onRetry = onRefresh,
                         onItemClick = onEscuelaProductClick,
+                        onAddToCart = onAddToCart
                     )
 
                     DemoCategorySection(onClick = onActionClick)
@@ -323,6 +336,7 @@ private fun EscuelaProductGridSection(
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
     onItemClick: (Int) -> Unit = {},
+    onAddToCart: () -> Unit = {}
 ) {
     Column(
         modifier = modifier.padding(16.dp)
@@ -348,7 +362,8 @@ private fun EscuelaProductGridSection(
                             EscuelaProductItem(
                                 product = product,
                                 modifier = Modifier.weight(1f),
-                                onItemClick = { onItemClick(product.id) }
+                                onItemClick = { onItemClick(product.id) },
+                                onAddToCart = onAddToCart
                             )
                         }
                         if (rowItems.size == 1) {
@@ -374,6 +389,7 @@ private fun EscuelaProductItem(
     product: Product,
     modifier: Modifier = Modifier,
     onItemClick: () -> Unit,
+    onAddToCart: () -> Unit = {}
 ) {
     Card(
         modifier = modifier.clickable(onClick = onItemClick),
@@ -417,13 +433,13 @@ private fun EscuelaProductItem(
             )
             Spacer(modifier = Modifier.height(8.dp))
             Button(
-                onClick = { },
+                onClick = onAddToCart,
                 modifier = Modifier.fillMaxWidth().height(36.dp),
                 shape = RoundedCornerShape(4.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF008848)),
                 contentPadding = PaddingValues(0.dp)
             ) {
-                Text("MUA", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                Text("THÊM VÀO GIỎ HÀNG", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
             }
         }
     }
@@ -613,16 +629,9 @@ private fun MainBannerSection(
                             text = product.title,
                             fontWeight = FontWeight.Bold,
                             fontSize = 18.sp,
+                            color = Color.White,
                             maxLines = 2,
-                            overflow = TextOverflow.Ellipsis,
-                            color = Color.White
-                        )
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Text(
-                            text = "${product.price}$",
-                            fontWeight = FontWeight.ExtraBold,
-                            fontSize = 16.sp,
-                            color = Color.White
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
                 }
@@ -630,33 +639,25 @@ private fun MainBannerSection(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(fallbackBanners[page]),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "KHUYẾN MÃI HẤP DẪN ${page + 1}",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 20.sp,
-                        color = Color.White
-                    )
-                }
+                        .background(fallbackBanners[page])
+                )
             }
         }
 
+        // Pager indicators
         Row(
             modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = 8.dp),
-            horizontalArrangement = Arrangement.Center
+                .align(Alignment.BottomEnd)
+                .padding(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             repeat(pageCount) { iteration ->
                 val color = if (pagerState.currentPage == iteration) Color.White else Color.White.copy(alpha = 0.5f)
                 Box(
                     modifier = Modifier
-                        .padding(2.dp)
+                        .size(6.dp)
                         .clip(CircleShape)
                         .background(color)
-                        .size(6.dp)
                 )
             }
         }
@@ -664,219 +665,184 @@ private fun MainBannerSection(
 }
 
 @Composable
-private fun DemoCategorySection(onClick: () -> Unit) {
-    val categories = listOf(
-        "Thịt, cá, trứng", "Rau, củ, trái cây", "Gạo, mì, gia vị", "Sữa, đồ uống",
-        "Bánh kẹo, ăn vặt", "Vệ sinh nhà cửa", "Chăm sóc cá nhân", "Đồ dùng gia đình"
+fun DailyMarketSection(
+    onCategoryClick: () -> Unit,
+    onRecipeClick: (Recipe) -> Unit,
+    onProductClick: (HomeDemoProduct) -> Unit
+) {
+    val recipes = listOf(
+        Recipe("Nấu canh chua"),
+        Recipe("Gỏi tôm thịt"),
+        Recipe("Bò kho")
     )
 
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp)
-            .background(Color.White, RoundedCornerShape(12.dp))
-            .padding(16.dp)
-    ) {
-        Text(
-            text = "DANH MỤC NGÀNH HÀNG",
-            fontWeight = FontWeight.Bold,
-            fontSize = 16.sp,
-            modifier = Modifier.padding(bottom = 12.dp)
-        )
-
-        categories.chunked(4).forEach { rowCategories ->
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                rowCategories.forEach { category ->
-                    CategoryItem(name = category, onClick = onClick)
-                }
-            }
-            Spacer(modifier = Modifier.height(16.dp))
-        }
-    }
-}
-
-@Composable
-private fun CategoryItem(name: String, onClick: () -> Unit) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier
-            .width(70.dp)
-            .clickable(onClick = onClick)
-    ) {
-        Box(
-            modifier = Modifier
-                .size(48.dp)
-                .background(Color(0xFFE8F5E9), CircleShape),
-            contentAlignment = Alignment.Center
-        ) {
-            // Placeholder for icon
-        }
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(
-            text = name,
-            fontSize = 10.sp,
-            textAlign = TextAlign.Center,
-            lineHeight = 12.sp,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis
-        )
-    }
-}
-
-@Composable
-private fun DemoProductsSection(onClick: (HomeDemoProduct) -> Unit) {
     val products = listOf(
-        HomeDemoProduct("Nước mắm Nam Ngư 750ml", 45000, 39000, "15%"),
-        HomeDemoProduct("Dầu ăn Tường An 1L", 52000, 48000, "8%"),
-        HomeDemoProduct("Gạo ST25 túi 5kg", 195000, 185000, "5%"),
-        HomeDemoProduct("Mì Hảo Hảo tôm chua cay", 4500, 4200, "7%")
+        HomeDemoProduct("Cà chua", "20.000đ", "https://img.freepik.com/free-photo/red-tomatoes_144627-15413.jpg"),
+        HomeDemoProduct("Hành lá", "5.000đ", "https://img.freepik.com/free-photo/green-onions_144627-15403.jpg"),
+        HomeDemoProduct("Tôm tươi", "150.000đ", "https://img.freepik.com/free-photo/fresh-shrimp_144627-15421.jpg")
     )
 
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp)
-            .background(Color(0xFFE8F5E9), RoundedCornerShape(12.dp))
-            .padding(16.dp)
-    ) {
+    Column(modifier = Modifier.padding(16.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "HÀNG THIẾT YẾU - GIÁ RẺ",
+                text = "ĐI CHỢ MỖI NGÀY",
                 fontWeight = FontWeight.Bold,
-                fontSize = 16.sp,
+                fontSize = 18.sp,
                 color = Color(0xFF008848)
             )
-            Icon(
-                imageVector = Icons.Default.ChevronRight,
-                contentDescription = null,
-                tint = Color(0xFF008848)
+            Text(
+                text = "Xem tất cả",
+                color = Color(0xFF1976D2),
+                fontSize = 13.sp,
+                modifier = Modifier.clickable(onClick = onCategoryClick)
             )
         }
+
         Spacer(modifier = Modifier.height(12.dp))
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
+        // Recipes horizontal list
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            items(recipes) { recipe ->
+                Surface(
+                    color = Color.White,
+                    shape = RoundedCornerShape(16.dp),
+                    border = BorderStroke(1.dp, Color(0xFFE0E0E0)),
+                    modifier = Modifier.clickable { onRecipeClick(recipe) }
+                ) {
+                    Text(
+                        text = recipe.name,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                        fontSize = 13.sp
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Products grid (simplified row for demo)
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             products.forEach { product ->
-                ProductItemCard(product = product, onClick = { onClick(product) }, modifier = Modifier.weight(1f))
+                HomeDemoProductItem(
+                    product = product,
+                    modifier = Modifier.weight(1f),
+                    onClick = { onProductClick(product) }
+                )
             }
         }
     }
 }
 
-@Composable
-private fun ProductItemCard(product: HomeDemoProduct, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    Card(
-        modifier = modifier.clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        shape = RoundedCornerShape(8.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(8.dp)
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(1f)
-                    .background(Color(0xFFF5F5F5))
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = product.name,
-                fontSize = 11.sp,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                lineHeight = 13.sp
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = "${product.price}đ",
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.Red
-            )
-            Text(
-                text = "${product.originalPrice}đ",
-                fontSize = 10.sp,
-                color = Color.Gray,
-                textDecoration = TextDecoration.LineThrough
-            )
-        }
-    }
-}
+data class Recipe(val name: String)
+data class HomeDemoProduct(val name: String, val price: String, val imageUrl: String)
 
 @Composable
-private fun DailyMarketSection(
-    onCategoryClick: () -> Unit,
-    onRecipeClick: (String) -> Unit,
-    onProductClick: (HomeDemoProduct) -> Unit
+fun HomeDemoProductItem(
+    product: HomeDemoProduct,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
 ) {
     Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(8.dp))
+            .background(Color.White)
+            .clickable(onClick = onClick)
+            .padding(8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        AsyncImage(
+            model = product.imageUrl,
+            contentDescription = product.name,
+            modifier = Modifier
+                .size(80.dp)
+                .clip(RoundedCornerShape(4.dp)),
+            contentScale = ContentScale.Crop
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = product.name,
+            fontSize = 12.sp,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center
+        )
+        Text(
+            text = product.price,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Bold,
+            color = Color.Red
+        )
+    }
+}
+
+@Composable
+fun DemoCategorySection(onClick: () -> Unit) {
+    val categories = listOf(
+        "Thịt, cá, trứng", "Rau, củ, trái cây", "Sữa, bỉm", "Đồ khô, gia vị"
+    )
+
+    LazyRow(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(16.dp)
+            .padding(vertical = 16.dp),
+        contentPadding = PaddingValues(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
+        items(categories) { category ->
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier
+                    .width(80.dp)
+                    .clickable(onClick = onClick)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(60.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFFE8F5E9)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(text = category.take(1), fontWeight = FontWeight.Bold, color = Color(0xFF008848))
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = category,
+                    fontSize = 11.sp,
+                    textAlign = TextAlign.Center,
+                    lineHeight = 14.sp
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun DemoProductsSection(onClick: (HomeDemoProduct) -> Unit) {
+    val products = listOf(
+        HomeDemoProduct("Dưa hấu hắc mỹ nhân", "12.000đ/kg", "https://img.freepik.com/free-photo/watermelon_144627-15417.jpg"),
+        HomeDemoProduct("Cam sành túi 2kg", "35.000đ", "https://img.freepik.com/free-photo/oranges_144627-15409.jpg"),
+        HomeDemoProduct("Ức gà phi lê 500g", "45.000đ", "https://img.freepik.com/free-photo/raw-chicken-breast_144627-15411.jpg")
+    )
+
+    Column(modifier = Modifier.padding(16.dp)) {
         Text(
-            text = "ĐI CHỢ MỖI NGÀY",
+            text = "SẢN PHẨM KHUYẾN MÃI",
             fontWeight = FontWeight.Bold,
-            fontSize = 18.sp
+            fontSize = 18.sp,
+            color = Color(0xFF008848)
         )
         Spacer(modifier = Modifier.height(12.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            // Left column: categories
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                listOf("Thịt các loại", "Cá, hải sản", "Trứng các loại", "Rau củ tươi").forEach { cat ->
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(40.dp)
-                            .background(Color.White, RoundedCornerShape(8.dp))
-                            .border(1.dp, Color(0xFFE0E0E0), RoundedCornerShape(8.dp))
-                            .clickable(onClick = onCategoryClick)
-                            .padding(horizontal = 8.dp),
-                        contentAlignment = Alignment.CenterStart
-                    ) {
-                        Text(text = cat, fontSize = 12.sp)
-                    }
-                }
-            }
-
-            // Right column: Featured recipe or product
-            Card(
-                modifier = Modifier
-                    .weight(1.5f)
-                    .height(184.dp)
-                    .clickable { onRecipeClick("Canh chua cá lóc") },
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Box(modifier = Modifier.fillMaxSize()) {
-                    Box(modifier = Modifier.fillMaxSize().background(Color(0xFFBDBDBD)))
-                    Column(
-                        modifier = Modifier
-                            .align(Alignment.BottomStart)
-                            .background(Color.Black.copy(alpha = 0.6f))
-                            .fillMaxWidth()
-                            .padding(8.dp)
-                    ) {
-                        Text(text = "Gợi ý hôm nay", color = Color.Yellow, fontSize = 10.sp)
-                        Text(text = "Canh chua cá lóc", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                    }
-                }
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            products.forEach { product ->
+                HomeDemoProductItem(
+                    product = product,
+                    modifier = Modifier.weight(1f),
+                    onClick = { onClick(product) }
+                )
             }
         }
     }
@@ -886,10 +852,13 @@ private fun DailyMarketSection(
 fun LoginRequiredDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Đăng nhập") },
+        title = { Text("Yêu cầu đăng nhập") },
         text = { Text("Vui lòng đăng nhập để thực hiện chức năng này.") },
         confirmButton = {
-            Button(onClick = onConfirm, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF008848))) {
+            Button(
+                onClick = onConfirm,
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF008848))
+            ) {
                 Text("Đăng nhập")
             }
         },
@@ -913,47 +882,34 @@ fun ProductSelectionBottomSheet(productName: String, onDismiss: () -> Unit) {
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(text = "Chọn định lượng", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+            Text(text = "Chọn loại: $productName", fontWeight = FontWeight.Bold, fontSize = 18.sp)
             IconButton(onClick = onDismiss) {
                 Icon(Icons.Default.Close, contentDescription = "Close")
             }
         }
-        
         Spacer(modifier = Modifier.height(16.dp))
-        
-        Text(text = productName, fontWeight = FontWeight.Medium, fontSize = 16.sp)
-        
-        Spacer(modifier = Modifier.height(24.dp))
-        
-        // Quantity selectors (mock)
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            listOf("300g", "500g", "1kg").forEach { weight ->
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .border(1.dp, Color(0xFF008848), RoundedCornerShape(8.dp))
-                        .padding(vertical = 12.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(text = weight, color = Color(0xFF008848))
-                }
+        // Selection options...
+        repeat(3) { i ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onDismiss() }
+                    .padding(vertical = 12.dp),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(text = "Tùy chọn ${i + 1}")
+                Icon(Icons.Default.ChevronRight, contentDescription = null, tint = Color.Gray)
             }
+            HorizontalDivider(color = Color(0xFFF5F5F5))
         }
-        
         Spacer(modifier = Modifier.height(24.dp))
-        
         Button(
-            onClick = { },
-            modifier = Modifier.fillMaxWidth().height(48.dp),
+            onClick = onDismiss,
+            modifier = Modifier.fillMaxWidth(),
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF008848))
         ) {
-            Text("THÊM VÀO GIỎ HÀNG", fontWeight = FontWeight.Bold)
+            Text("Xác nhận")
         }
-        
-        Spacer(modifier = Modifier.height(16.dp))
     }
 }
 
@@ -969,85 +925,46 @@ fun IngredientSelectionBottomSheet(recipeName: String, onDismiss: () -> Unit) {
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(text = "Nguyên liệu nấu món", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+            Text(text = "Nguyên liệu cho: $recipeName", fontWeight = FontWeight.Bold, fontSize = 18.sp)
             IconButton(onClick = onDismiss) {
                 Icon(Icons.Default.Close, contentDescription = "Close")
             }
         }
-        
-        Text(text = recipeName, color = Color(0xFF008848), fontWeight = FontWeight.Medium)
-        
         Spacer(modifier = Modifier.height(16.dp))
-        
-        // Ingredients list (mock)
-        repeat(3) { i ->
+        // Ingredient list with checkboxes...
+        repeat(4) { i ->
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Box(modifier = Modifier.size(40.dp).background(Color(0xFFF5F5F5), RoundedCornerShape(4.dp)))
-                Spacer(modifier = Modifier.width(12.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(text = "Nguyên liệu ${i + 1}", fontSize = 14.sp)
-                    Text(text = "20.000đ", fontSize = 12.sp, color = Color.Red, fontWeight = FontWeight.Bold)
-                }
-                Checkbox(checked = true, onCheckedChange = {}, colors = CheckboxDefaults.colors(checkedColor = Color(0xFF008848)))
+                Checkbox(checked = true, onCheckedChange = {})
+                Text(text = "Nguyên liệu ${i + 1}")
             }
-            HorizontalDivider(color = Color(0xFFEEEEEE))
         }
-        
         Spacer(modifier = Modifier.height(24.dp))
-        
         Button(
             onClick = onDismiss,
-            modifier = Modifier.fillMaxWidth().height(48.dp),
+            modifier = Modifier.fillMaxWidth(),
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF008848))
         ) {
-            Text("MUA TẤT CẢ NGUYÊN LIỆU", fontWeight = FontWeight.Bold)
+            Text("Thêm vào giỏ hàng")
         }
-        
-        Spacer(modifier = Modifier.height(16.dp))
     }
 }
 
-data class HomeDemoProduct(
-    val name: String,
-    val originalPrice: Int,
-    val price: Int,
-    val discount: String
-)
-
 @Preview(showBackground = true)
 @Composable
-fun HomeScreenPreview() {
+fun HomeContentPreview() {
     BhxTheme {
         HomeContent(
-            userProfile = UserProfile(
-                id = 1,
-                name = "Vũ Nguyễn",
-                phoneNumber = "0123456789",
-                rank = "Vàng",
-                points = 1000,
-                memberCode = "BHX123456"
-            ),
-            posts = listOf(
-                Post(userId = 1, id = 1, title = "Post Title 1", body = "Body 1"),
-                Post(userId = 1, id = 2, title = "Post Title 2", body = "Body 2")
-            ),
-            products = listOf(
-                Product(1, "Product 1", 10, "Desc 1", listOf("https://via.placeholder.com/150"), "Category 1"),
-                Product(2, "Product 2", 20, "Desc 2", listOf("https://via.placeholder.com/150"), "Category 2")
-            ),
-            productByCategories = listOf(
-                Product(3, "Cat Product 1", 15, "Desc 3", listOf("https://via.placeholder.com/150"), "Category 1")
-            ),
-            dummyCategories = listOf(
-                Category("Beauty", "beauty", ""),
-                Category("Fragrances", "fragrances", "")
-            ),
-            productSectionTitle = "SẢN PHẨM MỚI",
+            userProfile = null,
+            posts = emptyList(),
+            products = emptyList(),
+            productByCategories = emptyList(),
+            dummyCategories = emptyList(),
+            productSectionTitle = "Demo",
             selectedCategorySlug = "all",
             isLoading = false,
             isRefreshing = false,
@@ -1058,7 +975,8 @@ fun HomeScreenPreview() {
             onFetchDummyProductsByCategory = {},
             onEscuelaProductClick = {},
             onFetchProducts = {},
-            onRefreshPosts = {}
+            onRefreshPosts = {},
+            onAddToCart = {}
         )
     }
 }

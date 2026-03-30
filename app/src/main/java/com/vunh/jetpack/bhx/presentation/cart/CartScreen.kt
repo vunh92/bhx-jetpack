@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.ShoppingBasket
 import androidx.compose.material3.*
@@ -41,7 +42,7 @@ import java.util.Locale
 fun CartScreen(
     onMenuClick: () -> Unit,
     onNavigateToLogin: () -> Unit,
-    onProductClick: (CartProduct) -> Unit = {},
+    onProductClick: (Int, CartProduct) -> Unit = { _, _ -> },
     viewModel: CartViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -84,20 +85,57 @@ fun CartScreen(
                     CartListContent(
                         items = uiState.cartItems,
                         userName = userProfile?.name?.split(" ")?.lastOrNull() ?: "",
-                        onItemClick = onProductClick
+                        onItemClick = onProductClick,
+                        onDeleteCart = { viewModel.deleteCart(it) }
                     )
                 }
             }
         }
     }
+
+    if (uiState.isDeleting) {
+        Box(
+            modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.3f)),
+            contentAlignment = Alignment.Center
+        ) {
+            CircularProgressIndicator(color = Color(0xFF008848))
+        }
+    }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CartListContent(
     items: List<CartItemUiState>, 
     userName: String,
-    onItemClick: (CartProduct) -> Unit
+    onItemClick: (Int, CartProduct) -> Unit,
+    onDeleteCart: (Int) -> Unit
 ) {
+    var cartIdToDelete by remember { mutableStateOf<Int?>(null) }
+
+    if (cartIdToDelete != null) {
+        AlertDialog(
+            onDismissRequest = { cartIdToDelete = null },
+            title = { Text("Xác nhận xóa") },
+            text = { Text("Bạn có chắc chắn muốn xóa giỏ hàng này không?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        cartIdToDelete?.let { onDeleteCart(it) }
+                        cartIdToDelete = null
+                    }
+                ) {
+                    Text("Có", color = Color.Red)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { cartIdToDelete = null }) {
+                    Text("Không")
+                }
+            }
+        )
+    }
+
     Column(modifier = Modifier.fillMaxSize()) {
         Text(
             text = "Giỏ hàng của bạn ($userName)",
@@ -111,11 +149,48 @@ fun CartListContent(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            items(items) { item ->
-                CartProductItem(
-                    product = item.product,
-                    onClick = { onItemClick(item.product) }
+            items(
+                items = items,
+                key = { "${it.cartId}-${it.product.id}" }
+            ) { item ->
+                val dismissState = rememberSwipeToDismissBoxState(
+                    confirmValueChange = {
+                        if (it == SwipeToDismissBoxValue.EndToStart) {
+                            cartIdToDelete = item.cartId
+                        }
+                        false // Don't dismiss automatically, wait for dialog
+                    }
                 )
+
+                SwipeToDismissBox(
+                    state = dismissState,
+                    backgroundContent = {
+                        val color = when (dismissState.dismissDirection) {
+                            SwipeToDismissBoxValue.EndToStart -> Color.Red.copy(alpha = 0.8f)
+                            else -> Color.Transparent
+                        }
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(color)
+                                .padding(horizontal = 20.dp),
+                            contentAlignment = Alignment.CenterEnd
+                        ) {
+                            Icon(
+                                Icons.Default.Delete,
+                                contentDescription = "Delete",
+                                tint = Color.White
+                            )
+                        }
+                    },
+                    enableDismissFromStartToEnd = false
+                ) {
+                    CartProductItem(
+                        product = item.product,
+                        onClick = { onItemClick(item.cartId, item.product) }
+                    )
+                }
             }
         }
 

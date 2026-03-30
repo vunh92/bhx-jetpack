@@ -1,5 +1,6 @@
 package com.vunh.jetpack.bhx.presentation.cart
 
+import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -9,7 +10,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -18,10 +18,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.vunh.jetpack.bhx.data.remote.model.CartProduct
 import com.vunh.jetpack.bhx.ui.theme.BhxTheme
@@ -30,10 +32,29 @@ import java.util.Locale
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CartProductDetailScreen(
+    cartId: Int,
     product: CartProduct?,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    viewModel: CartProductDetailViewModel = hiltViewModel()
 ) {
+    val context = LocalContext.current
+    val uiState by viewModel.uiState.collectAsState()
     var currentQuantity by remember(product) { mutableIntStateOf(product?.quantity ?: 1) }
+
+    LaunchedEffect(uiState.isSuccess) {
+        if (uiState.isSuccess) {
+            Toast.makeText(context, "Cập nhật giỏ hàng thành công", Toast.LENGTH_SHORT).show()
+            viewModel.resetState()
+            onBack()
+        }
+    }
+
+    LaunchedEffect(uiState.error) {
+        uiState.error?.let {
+            Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+            viewModel.resetState()
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -64,24 +85,20 @@ fun CartProductDetailScreen(
                             .navigationBarsPadding(),
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        OutlinedButton(
-                            onClick = { /* TODO: Handle delete */ },
-                            modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Red),
-                            border = BorderStroke(1.dp, Color.Red),
-                            shape = RoundedCornerShape(8.dp)
-                        ) {
-                            Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Xóa")
-                        }
                         Button(
-                            onClick = { /* TODO: Handle update */ },
+                            onClick = { 
+                                viewModel.updateProductQuantity(cartId, product.id, currentQuantity)
+                            },
                             modifier = Modifier.weight(1f),
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF008848)),
-                            shape = RoundedCornerShape(8.dp)
+                            shape = RoundedCornerShape(8.dp),
+                            enabled = !uiState.isLoading
                         ) {
-                            Text("Cập nhật")
+                            if (uiState.isLoading) {
+                                CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
+                            } else {
+                                Text("Cập nhật")
+                            }
                         }
                     }
                 }
@@ -243,6 +260,7 @@ fun DetailRow(
 fun CartProductDetailScreenPreview() {
     BhxTheme {
         CartProductDetailScreen(
+            cartId = 1,
             product = CartProduct(
                 id = 1,
                 title = "Sữa tươi Vinamilk ít đường 1L",

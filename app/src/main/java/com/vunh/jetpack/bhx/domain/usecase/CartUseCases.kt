@@ -2,6 +2,8 @@ package com.vunh.jetpack.bhx.domain.usecase
 
 import com.vunh.jetpack.bhx.data.local.ProfileManager
 import com.vunh.jetpack.bhx.data.remote.DummyJsonApiService
+import com.vunh.jetpack.bhx.data.remote.UpdateCartProduct
+import com.vunh.jetpack.bhx.data.remote.UpdateCartRequest
 import com.vunh.jetpack.bhx.data.remote.model.CartResponse
 import com.vunh.jetpack.bhx.presentation.cart.CartCategoryUi
 import com.vunh.jetpack.bhx.presentation.cart.CartUiState
@@ -28,5 +30,13 @@ class GetCartByIdUseCase @Inject constructor(
 ) {
     suspend operator fun invoke(cartId: Int): CartResponse {
         return dummyJsonApiService.getCartById(cartId)
+    }
+}
+
+class UpdateCartUseCase @Inject constructor(
+    private val dummyJsonApiService: DummyJsonApiService
+) {
+    suspend operator fun invoke(cartId: Int, products: List<UpdateCartProduct>): CartResponse {
+        return dummyJsonApiService.updateCart(cartId, UpdateCartRequest(products))
     }
 }

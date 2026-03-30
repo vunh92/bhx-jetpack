@@ -40,6 +40,7 @@ import com.vunh.jetpack.bhx.presentation.category.CategoryScreen
 import com.vunh.jetpack.bhx.presentation.history.OrderHistoryScreen
 import com.vunh.jetpack.bhx.presentation.home.HomeScreen
 import com.vunh.jetpack.bhx.presentation.profile.CouponScreen
+import com.vunh.jetpack.bhx.presentation.profile.EditProfileScreen
 import com.vunh.jetpack.bhx.presentation.profile.GiftScreen
 import com.vunh.jetpack.bhx.presentation.profile.NotificationScreen
 import com.vunh.jetpack.bhx.presentation.profile.PointExchangeScreen
@@ -180,9 +181,9 @@ fun BhxNavHost(
             CartScreen(
                 onMenuClick = onMenuClick,
                 onNavigateToLogin = onNavigateToProfile,
-                onProductClick = { product ->
+                onProductClick = { cartId, product ->
                     val productJson = Uri.encode(Gson().toJson(product))
-                    navController.navigate("cart_product_detail/$productJson")
+                    navController.navigate("cart_product_detail/$cartId/$productJson")
                 }
             )
         }
@@ -193,12 +194,17 @@ fun BhxNavHost(
             CartDetailScreen(onBack = { navController.popBackStack() })
         }
         composable(
-            route = "cart_product_detail/{productJson}",
-            arguments = listOf(navArgument("productJson") { type = NavType.StringType })
+            route = "cart_product_detail/{cartId}/{productJson}",
+            arguments = listOf(
+                navArgument("cartId") { type = NavType.IntType },
+                navArgument("productJson") { type = NavType.StringType }
+            )
         ) { backStackEntry ->
+            val cartId = backStackEntry.arguments?.getInt("cartId") ?: 0
             val productJson = backStackEntry.arguments?.getString("productJson")
             val product = Gson().fromJson(productJson, CartProduct::class.java)
             CartProductDetailScreen(
+                cartId = cartId,
                 product = product,
                 onBack = { navController.popBackStack() }
             )
@@ -218,8 +224,12 @@ fun BhxNavHost(
                 onCouponClick = { navController.navigate("coupons") },
                 onSpecialOfferClick = { navController.navigate("special-offers") },
                 onGiftClick = { navController.navigate("gifts") },
-                onPointExchangeClick = { navController.navigate("point-exchange") }
+                onPointExchangeClick = { navController.navigate("point-exchange") },
+                onEditProfileClick = { navController.navigate("edit-profile") }
             )
+        }
+        composable("edit-profile") {
+            EditProfileScreen(onBack = { navController.popBackStack() })
         }
         composable("notifications") {
             NotificationScreen(

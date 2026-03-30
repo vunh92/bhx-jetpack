@@ -27,6 +27,7 @@ data class CartUiState(
     val categories: List<CartCategoryUi> = emptyList(),
     val cartItems: List<CartItemUiState> = emptyList(),
     val isLoading: Boolean = false,
+    val isDeleting: Boolean = false,
     val errorMessage: String? = null
 ) {
     val isLoggedIn: Boolean = userProfile != null
@@ -41,19 +42,22 @@ class CartViewModel @Inject constructor(
 
     private val _cartItems = MutableStateFlow<List<CartItemUiState>>(emptyList())
     private val _isLoading = MutableStateFlow(false)
+    private val _isDeleting = MutableStateFlow(false)
     private val _errorMessage = MutableStateFlow<String?>(null)
 
     val uiState: StateFlow<CartUiState> = combine(
         profileManager.profileFlow,
         _cartItems,
         _isLoading,
+        _isDeleting,
         _errorMessage
-    ) { profile, items, loading, error ->
+    ) { profile, items, loading, deleting, error ->
         CartUiState(
             userProfile = profile,
             categories = getCartUiStateUseCase().categories,
             cartItems = items,
             isLoading = loading,
+            isDeleting = deleting,
             errorMessage = error
         )
     }.stateIn(
@@ -95,6 +99,21 @@ class CartViewModel @Inject constructor(
                 _errorMessage.value = e.message ?: "Failed to load cart"
             } finally {
                 _isLoading.value = false
+            }
+        }
+    }
+
+    fun deleteCart(cartId: Int) {
+        viewModelScope.launch {
+            _isDeleting.value = true
+            try {
+                dummyJsonApiService.deleteCart(cartId)
+                // Filter out all products belonging to this cartId from local state
+                _cartItems.value = _cartItems.value.filter { it.cartId != cartId }
+            } catch (e: Exception) {
+                _errorMessage.value = e.message ?: "Failed to delete cart"
+            } finally {
+                _isDeleting.value = false
             }
         }
     }

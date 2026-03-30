@@ -3,6 +3,9 @@ package com.vunh.jetpack.bhx.presentation.home
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vunh.jetpack.bhx.data.local.ProfileManager
+import com.vunh.jetpack.bhx.data.remote.AddCartProduct
+import com.vunh.jetpack.bhx.data.remote.AddCartRequest
+import com.vunh.jetpack.bhx.data.remote.DummyJsonApiService
 import com.vunh.jetpack.bhx.domain.model.Category
 import com.vunh.jetpack.bhx.domain.model.Post
 import com.vunh.jetpack.bhx.domain.model.Product
@@ -15,8 +18,11 @@ import com.vunh.jetpack.bhx.domain.usecase.SyncPostsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.supervisorScope
@@ -30,6 +36,7 @@ class HomeViewModel @Inject constructor(
     private val getEscuelaProductsUseCase: GetEscuelaProductsUseCase,
     private val getDummyCategoriesUseCase: GetDummyCategoriesUseCase,
     private val getDummyProductsByCategoryUseCase: GetDummyProductsByCategoryUseCase,
+    private val dummyJsonApiService: DummyJsonApiService,
     private val profileManager: ProfileManager
 ) : ViewModel() {
 
@@ -62,6 +69,9 @@ class HomeViewModel @Inject constructor(
 
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
+
+    private val _toastMessage = MutableSharedFlow<String>()
+    val toastMessage: SharedFlow<String> = _toastMessage.asSharedFlow()
 
     init {
         // Observe posts from database
@@ -193,6 +203,28 @@ class HomeViewModel @Inject constructor(
             try {
                 val result = getDummyCategoriesUseCase()
                 _dummyCategories.value = result
+            } catch (e: Exception) {
+                handleRefreshError(e)
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
+    fun addToCart() {
+        viewModelScope.launch {
+            _isLoading.value = true
+            try {
+                // Using payload specified in the prompt
+                val request = AddCartRequest(
+                    userId = 1,
+                    products = listOf(
+                        AddCartProduct(id = 144, quantity = 4),
+                        AddCartProduct(id = 98, quantity = 1)
+                    )
+                )
+                dummyJsonApiService.addCart(request)
+                _toastMessage.emit("Đã thêm vào giỏ hàng thành công!")
             } catch (e: Exception) {
                 handleRefreshError(e)
             } finally {
