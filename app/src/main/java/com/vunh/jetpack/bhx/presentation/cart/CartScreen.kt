@@ -41,7 +41,7 @@ import java.util.Locale
 fun CartScreen(
     onMenuClick: () -> Unit,
     onNavigateToLogin: () -> Unit,
-    onProductClick: (Int) -> Unit = {},
+    onProductClick: (CartProduct) -> Unit = {},
     viewModel: CartViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -96,7 +96,7 @@ fun CartScreen(
 fun CartListContent(
     items: List<CartItemUiState>, 
     userName: String,
-    onItemClick: (Int) -> Unit
+    onItemClick: (CartProduct) -> Unit
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
         Text(
@@ -114,7 +114,7 @@ fun CartListContent(
             items(items) { item ->
                 CartProductItem(
                     product = item.product,
-                    onClick = { onItemClick(item.product.id) }
+                    onClick = { onItemClick(item.product) }
                 )
             }
         }

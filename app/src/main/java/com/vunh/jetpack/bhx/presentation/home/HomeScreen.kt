@@ -29,6 +29,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -36,6 +37,7 @@ import coil.compose.AsyncImage
 import com.vunh.jetpack.bhx.R
 import com.vunh.jetpack.bhx.domain.model.*
 import com.vunh.jetpack.bhx.presentation.common.HeaderSection
+import com.vunh.jetpack.bhx.ui.theme.BhxTheme
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.yield
 
@@ -44,11 +46,10 @@ import kotlinx.coroutines.yield
 fun HomeScreen(
     onMenuClick: () -> Unit,
     onNavigateToProfile: () -> Unit,
-    viewModel: HomeViewModel = hiltViewModel()
+    viewModel: HomeViewModel = hiltViewModel(),
+    onEscuelaProductClick: (Int) -> Unit = {},
 ) {
     val userProfile by viewModel.userProfile.collectAsState()
-    val isLoggedIn = userProfile != null
-    
     val posts by viewModel.posts.collectAsState()
     val products by viewModel.products.collectAsState()
     val productByCategories by viewModel.productByCategories.collectAsState()
@@ -59,10 +60,54 @@ fun HomeScreen(
     val isRefreshing by viewModel.isRefreshing.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
 
+    HomeContent(
+        userProfile = userProfile,
+        posts = posts,
+        products = products,
+        productByCategories = productByCategories,
+        dummyCategories = dummyCategories,
+        productSectionTitle = productSectionTitle,
+        selectedCategorySlug = selectedCategorySlug,
+        isLoading = isLoading,
+        isRefreshing = isRefreshing,
+        errorMessage = errorMessage,
+        onMenuClick = onMenuClick,
+        onNavigateToProfile = onNavigateToProfile,
+        onRefresh = viewModel::refreshAll,
+        onFetchDummyProductsByCategory = viewModel::fetchDummyProductsByCategory,
+        onEscuelaProductClick = onEscuelaProductClick,
+        onFetchProducts = viewModel::fetchProducts,
+        onRefreshPosts = viewModel::refreshPosts
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun HomeContent(
+    userProfile: UserProfile?,
+    posts: List<Post>,
+    products: List<Product>,
+    productByCategories: List<Product>,
+    dummyCategories: List<Category>,
+    productSectionTitle: String,
+    selectedCategorySlug: String,
+    isLoading: Boolean,
+    isRefreshing: Boolean,
+    errorMessage: String?,
+    onMenuClick: () -> Unit,
+    onNavigateToProfile: () -> Unit,
+    onRefresh: () -> Unit,
+    onFetchDummyProductsByCategory: (Category) -> Unit,
+    onEscuelaProductClick: (Int) -> Unit,
+    onFetchProducts: () -> Unit,
+    onRefreshPosts: () -> Unit,
+) {
+    val isLoggedIn = userProfile != null
+    
     var showLoginDialog by remember { mutableStateOf(false) }
     var showProductSheet by remember { mutableStateOf(false) }
     var showIngredientSheet by remember { mutableStateOf(false) }
-    var selectedProductForSheet by remember { mutableStateOf<ProductItem?>(null) }
+    var selectedProductForSheet by remember { mutableStateOf<HomeDemoProduct?>(null) }
     var selectedRecipeForSheet by remember { mutableStateOf<Recipe?>(null) }
     val productSheetState = rememberModalBottomSheetState()
     val ingredientSheetState = rememberModalBottomSheetState()
@@ -134,7 +179,7 @@ fun HomeScreen(
         } else {
             PullToRefreshBox(
                 isRefreshing = isRefreshing,
-                onRefresh = viewModel::refreshAll,
+                onRefresh = onRefresh,
                 modifier = Modifier.fillMaxSize()
             ) {
                 Column(
@@ -153,7 +198,7 @@ fun HomeScreen(
                             ApiProductStatusCard(
                                 message = errorMessage.orEmpty(),
                                 actionLabel = stringResource(R.string.home_retry),
-                                onActionClick = viewModel::refreshAll
+                                onActionClick = onRefresh
                             )
                             Spacer(modifier = Modifier.height(16.dp))
                         }
@@ -167,14 +212,15 @@ fun HomeScreen(
                     DummyCategoriesSection(
                         categories = dummyCategories,
                         selectedCategorySlug = selectedCategorySlug,
-                        onCategoryClick = viewModel::fetchDummyProductsByCategory
+                        onCategoryClick = onFetchDummyProductsByCategory
                     )
 
                     EscuelaProductGridSection(
                         title = productSectionTitle,
                         products = productByCategories,
                         errorMessage = errorMessage,
-                        onRetry = viewModel::refreshAll
+                        onRetry = onRefresh,
+                        onItemClick = onEscuelaProductClick,
                     )
 
                     DemoCategorySection(onClick = onActionClick)
@@ -202,7 +248,7 @@ fun HomeScreen(
                     HomeApiProductsSection(
                         posts = posts,
                         errorMessage = errorMessage,
-                        onRetry = viewModel::refreshPosts
+                        onRetry = onRefreshPosts
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                 }
@@ -233,8 +279,9 @@ private fun DummyCategoriesSection(
     Column(
         modifier = modifier.padding(vertical = 16.dp)
     ) {
+        val title = "DUMMY JSON CATEGORIES"
         Text(
-            text = "DUMMY JSON CATEGORIES",
+            text = title,
             modifier = Modifier.padding(horizontal = 16.dp),
             fontWeight = FontWeight.Bold,
             fontSize = 16.sp,
@@ -274,7 +321,8 @@ private fun EscuelaProductGridSection(
     products: List<Product>,
     errorMessage: String?,
     onRetry: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onItemClick: (Int) -> Unit = {},
 ) {
     Column(
         modifier = modifier.padding(16.dp)
@@ -299,7 +347,8 @@ private fun EscuelaProductGridSection(
                         rowItems.forEach { product ->
                             EscuelaProductItem(
                                 product = product,
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier.weight(1f),
+                                onItemClick = { onItemClick(product.id) }
                             )
                         }
                         if (rowItems.size == 1) {
@@ -323,10 +372,11 @@ private fun EscuelaProductGridSection(
 @Composable
 private fun EscuelaProductItem(
     product: Product,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onItemClick: () -> Unit,
 ) {
     Card(
-        modifier = modifier,
+        modifier = modifier.clickable(onClick = onItemClick),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         shape = RoundedCornerShape(12.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
@@ -677,12 +727,12 @@ private fun CategoryItem(name: String, onClick: () -> Unit) {
 }
 
 @Composable
-private fun DemoProductsSection(onClick: (ProductItem) -> Unit) {
+private fun DemoProductsSection(onClick: (HomeDemoProduct) -> Unit) {
     val products = listOf(
-        ProductItem("Nước mắm Nam Ngư 750ml", 45000, 39000, "15%"),
-        ProductItem("Dầu ăn Tường An 1L", 52000, 48000, "8%"),
-        ProductItem("Gạo ST25 túi 5kg", 195000, 185000, "5%"),
-        ProductItem("Mì Hảo Hảo tôm chua cay", 4500, 4200, "7%")
+        HomeDemoProduct("Nước mắm Nam Ngư 750ml", 45000, 39000, "15%"),
+        HomeDemoProduct("Dầu ăn Tường An 1L", 52000, 48000, "8%"),
+        HomeDemoProduct("Gạo ST25 túi 5kg", 195000, 185000, "5%"),
+        HomeDemoProduct("Mì Hảo Hảo tôm chua cay", 4500, 4200, "7%")
     )
 
     Column(
@@ -723,7 +773,7 @@ private fun DemoProductsSection(onClick: (ProductItem) -> Unit) {
 }
 
 @Composable
-private fun ProductItemCard(product: ProductItem, onClick: () -> Unit, modifier: Modifier = Modifier) {
+private fun ProductItemCard(product: HomeDemoProduct, onClick: () -> Unit, modifier: Modifier = Modifier) {
     Card(
         modifier = modifier.clickable(onClick = onClick),
         colors = CardDefaults.cardColors(containerColor = Color.White),
@@ -767,7 +817,7 @@ private fun ProductItemCard(product: ProductItem, onClick: () -> Unit, modifier:
 private fun DailyMarketSection(
     onCategoryClick: () -> Unit,
     onRecipeClick: (String) -> Unit,
-    onProductClick: (ProductItem) -> Unit
+    onProductClick: (HomeDemoProduct) -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -896,7 +946,7 @@ fun ProductSelectionBottomSheet(productName: String, onDismiss: () -> Unit) {
         Spacer(modifier = Modifier.height(24.dp))
         
         Button(
-            onClick = onDismiss,
+            onClick = { },
             modifier = Modifier.fillMaxWidth().height(48.dp),
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF008848))
         ) {
@@ -962,9 +1012,53 @@ fun IngredientSelectionBottomSheet(recipeName: String, onDismiss: () -> Unit) {
     }
 }
 
-data class ProductItem(
+data class HomeDemoProduct(
     val name: String,
     val originalPrice: Int,
     val price: Int,
     val discount: String
 )
+
+@Preview(showBackground = true)
+@Composable
+fun HomeScreenPreview() {
+    BhxTheme {
+        HomeContent(
+            userProfile = UserProfile(
+                id = 1,
+                name = "Vũ Nguyễn",
+                phoneNumber = "0123456789",
+                rank = "Vàng",
+                points = 1000,
+                memberCode = "BHX123456"
+            ),
+            posts = listOf(
+                Post(userId = 1, id = 1, title = "Post Title 1", body = "Body 1"),
+                Post(userId = 1, id = 2, title = "Post Title 2", body = "Body 2")
+            ),
+            products = listOf(
+                Product(1, "Product 1", 10, "Desc 1", listOf("https://via.placeholder.com/150"), "Category 1"),
+                Product(2, "Product 2", 20, "Desc 2", listOf("https://via.placeholder.com/150"), "Category 2")
+            ),
+            productByCategories = listOf(
+                Product(3, "Cat Product 1", 15, "Desc 3", listOf("https://via.placeholder.com/150"), "Category 1")
+            ),
+            dummyCategories = listOf(
+                Category("Beauty", "beauty", ""),
+                Category("Fragrances", "fragrances", "")
+            ),
+            productSectionTitle = "SẢN PHẨM MỚI",
+            selectedCategorySlug = "all",
+            isLoading = false,
+            isRefreshing = false,
+            errorMessage = null,
+            onMenuClick = {},
+            onNavigateToProfile = {},
+            onRefresh = {},
+            onFetchDummyProductsByCategory = {},
+            onEscuelaProductClick = {},
+            onFetchProducts = {},
+            onRefreshPosts = {}
+        )
+    }
+}

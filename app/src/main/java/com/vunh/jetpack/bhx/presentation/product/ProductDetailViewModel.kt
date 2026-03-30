@@ -1,4 +1,4 @@
-package com.vunh.jetpack.bhx.presentation.cart
+package com.vunh.jetpack.bhx.presentation.product
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel

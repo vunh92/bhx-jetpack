@@ -1,12 +1,12 @@
 package com.vunh.jetpack.bhx
 
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBox
@@ -22,8 +22,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -31,10 +29,13 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.google.gson.Gson
 import com.vunh.jetpack.bhx.data.local.ProfileManager
+import com.vunh.jetpack.bhx.data.remote.model.CartProduct
 import com.vunh.jetpack.bhx.presentation.cart.CartDetailScreen
+import com.vunh.jetpack.bhx.presentation.cart.CartProductDetailScreen
 import com.vunh.jetpack.bhx.presentation.cart.CartScreen
-import com.vunh.jetpack.bhx.presentation.cart.ProductDetailScreen
+import com.vunh.jetpack.bhx.presentation.product.ProductDetailScreen
 import com.vunh.jetpack.bhx.presentation.category.CategoryScreen
 import com.vunh.jetpack.bhx.presentation.history.OrderHistoryScreen
 import com.vunh.jetpack.bhx.presentation.home.HomeScreen
@@ -165,7 +166,8 @@ fun BhxNavHost(
         composable(AppDestinations.HOME.route) {
             HomeScreen(
                 onMenuClick = onMenuClick,
-                onNavigateToProfile = onNavigateToProfile
+                onNavigateToProfile = onNavigateToProfile,
+                onEscuelaProductClick = { productId -> navController.navigate("product_detail/$productId") }
             )
         }
         composable(AppDestinations.HISTORY.route) {
@@ -178,7 +180,10 @@ fun BhxNavHost(
             CartScreen(
                 onMenuClick = onMenuClick,
                 onNavigateToLogin = onNavigateToProfile,
-                onProductClick = { productId -> navController.navigate("product_detail/$productId") }
+                onProductClick = { product ->
+                    val productJson = Uri.encode(Gson().toJson(product))
+                    navController.navigate("cart_product_detail/$productJson")
+                }
             )
         }
         composable(
@@ -186,6 +191,17 @@ fun BhxNavHost(
             arguments = listOf(navArgument("cartId") { type = NavType.IntType })
         ) {
             CartDetailScreen(onBack = { navController.popBackStack() })
+        }
+        composable(
+            route = "cart_product_detail/{productJson}",
+            arguments = listOf(navArgument("productJson") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val productJson = backStackEntry.arguments?.getString("productJson")
+            val product = Gson().fromJson(productJson, CartProduct::class.java)
+            CartProductDetailScreen(
+                product = product,
+                onBack = { navController.popBackStack() }
+            )
         }
         composable(
             route = "product_detail/{productId}",
